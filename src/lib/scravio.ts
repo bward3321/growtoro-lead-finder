@@ -190,14 +190,18 @@ export async function getExportUrl(campaignId: string, exportId: string) {
 }
 
 export async function createListExport(campaignId: string) {
-  return scravioFetch(`/campaigns/${campaignId}/list-exports`, {
+  return scravioFetch("/list-exports", {
     method: "POST",
-    body: JSON.stringify({ emailOnly: true, fileFormat: "csv" }),
+    body: JSON.stringify({ campaignId, emailOnly: true, fileFormat: "csv" }),
   });
 }
 
-export async function getListExportDownload(campaignId: string, exportId: string) {
-  return scravioFetch(`/campaigns/${campaignId}/list-exports/${exportId}/download`);
+export async function getListExports(campaignId: string) {
+  return scravioFetch(`/list-exports?campaignId=${campaignId}`);
+}
+
+export async function getListExportDownload(exportId: string) {
+  return scravioFetch(`/list-exports/${exportId}/download`);
 }
 
 export async function getAuthMe() {

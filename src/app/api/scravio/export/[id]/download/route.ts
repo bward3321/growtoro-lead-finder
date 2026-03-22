@@ -27,7 +27,7 @@ export async function GET(
   }
 
   try {
-    const result = await scravio.getListExportDownload(scravioCampaignId, exportId);
+    const result = await scravio.getListExportDownload(exportId);
     return Response.json({
       status: result.status || result.state,
       downloadUrl: result.download_url || result.url || null,

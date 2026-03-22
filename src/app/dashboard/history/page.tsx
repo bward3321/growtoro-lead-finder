@@ -63,11 +63,13 @@ function getSearchTarget(scrape: Scrape): string {
 
 function DownloadButton({ scrape }: { scrape: Scrape }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleDownload(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/scravio/export", {
         method: "POST",
@@ -75,49 +77,44 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
         body: JSON.stringify({ campaignId: scrape.id }),
       });
       const data = await res.json();
-      if (!data.exportId) return;
-
-      const scravioCampaignId = data.scravioCampaignId;
-      for (let i = 0; i < 30; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const pollRes = await fetch(
-          `/api/scravio/export/${data.exportId}/download?campaignId=${scravioCampaignId}`
-        );
-        const pollData = await pollRes.json();
-        if (pollData.downloadUrl) {
-          window.open(pollData.downloadUrl, "_blank");
-          return;
-        }
-        if (pollData.status === "failed" || pollData.status === "error") return;
+      if (data.downloadUrl) {
+        window.open(data.downloadUrl, "_blank");
+      } else {
+        setError(data.error || "Export failed");
       }
+    } catch {
+      setError("Network error");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <button
-      onClick={handleDownload}
-      disabled={loading}
-      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
-    >
-      {loading ? (
-        <>
-          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Preparing...
-        </>
-      ) : (
-        <>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3" />
-          </svg>
-          Download CSV
-        </>
-      )}
-    </button>
+    <div className="flex flex-col items-start gap-1">
+      <button
+        onClick={handleDownload}
+        disabled={loading}
+        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-accent rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
+      >
+        {loading ? (
+          <>
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Preparing...
+          </>
+        ) : (
+          <>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3" />
+            </svg>
+            Download CSV
+          </>
+        )}
+      </button>
+      {error && <span className="text-xs text-danger">{error}</span>}
+    </div>
   );
 }
 
