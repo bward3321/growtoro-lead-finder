@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
+      client_reference_id: session.id,
       metadata: {
         userId: session.id,
         packId: pack.id,
