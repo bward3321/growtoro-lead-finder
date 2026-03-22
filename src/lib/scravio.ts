@@ -10,11 +10,13 @@ async function scravioFetch(path: string, options: RequestInit = {}): Promise<an
 
   const res = await fetch(url, {
     ...options,
+    cache: "no-store",
     headers: {
       "X-API-Key": API_KEY,
       "Content-Type": "application/json",
       "Accept": "application/json",
       "User-Agent": "GrowtorLeadFinder/1.0",
+      "Connection": "keep-alive",
       ...options.headers,
     },
   });
