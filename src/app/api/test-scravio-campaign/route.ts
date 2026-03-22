@@ -30,35 +30,34 @@ async function tryCreate(label: string, payload: Record<string, unknown>) {
 
 export async function GET() {
   const attempts = await Promise.all([
-    tryCreate("Attempt 1: keywords as array", {
+    tryCreate("Keyword search (nested inputs/limits)", {
       type: "INSTAGRAM_KEYWORD_SEARCH",
-      keywords: ["fitness coach"],
-      maxEmailsToFind: 10,
-      country: "US",
+      inputs: {
+        keywords: ["fitness coach"],
+        country: "us",
+        language: "en",
+      },
+      limits: {
+        maxEmails: 10,
+      },
     }),
-    tryCreate("Attempt 2: keywords as string", {
-      type: "INSTAGRAM_KEYWORD_SEARCH",
-      keywords: "fitness coach",
-      maxEmailsToFind: 10,
-      country: "US",
+    tryCreate("Profile followers (nested inputs/limits)", {
+      type: "INSTAGRAM_USER_FOLLOWERS",
+      inputs: {
+        targetUser: "instagram",
+      },
+      limits: {
+        maxProfilesToScan: 10,
+      },
     }),
-    tryCreate("Attempt 3: with language", {
-      type: "INSTAGRAM_KEYWORD_SEARCH",
-      keywords: ["fitness coach"],
-      maxEmailsToFind: 10,
-      country: "US",
-      language: "en",
-    }),
-    tryCreate("Attempt 4: minimal", {
-      type: "INSTAGRAM_KEYWORD_SEARCH",
-      keywords: ["fitness coach"],
-      maxEmailsToFind: 10,
-    }),
-    tryCreate("Attempt 5: emailsToFind instead", {
-      type: "INSTAGRAM_KEYWORD_SEARCH",
-      keywords: ["fitness coach"],
-      emailsToFind: 10,
-      country: "US",
+    tryCreate("Hashtag (nested inputs/limits)", {
+      type: "INSTAGRAM_HASHTAG",
+      inputs: {
+        hashtags: ["fitness"],
+      },
+      limits: {
+        maxProfilesToScan: 10,
+      },
     }),
   ]);
 

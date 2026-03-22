@@ -36,7 +36,34 @@ async function scravioFetch(path: string, options: RequestInit = {}): Promise<an
   return data;
 }
 
-// Map our internal field names to what Scravio's API actually expects
+const KEYWORD_TYPES = new Set([
+  "INSTAGRAM_KEYWORD_SEARCH",
+  "X_KEYWORD_SEARCH",
+  "YOUTUBE_KEYWORD_SEARCH",
+  "FACEBOOK_KEYWORD_SEARCH",
+  "LINKEDIN_KEYWORD_SEARCH",
+  "TIKTOK_KEYWORD_SEARCH",
+]);
+
+const PROFILE_TYPES = new Set([
+  "INSTAGRAM_USER_FOLLOWERS",
+  "INSTAGRAM_USER_FOLLOWING",
+  "X_FOLLOWERS",
+  "X_FOLLOWING",
+]);
+
+const HASHTAG_TYPES = new Set([
+  "INSTAGRAM_HASHTAG",
+]);
+
+const POST_TYPES = new Set([
+  "INSTAGRAM_POST_LIKERS",
+  "INSTAGRAM_POST_COMMENTERS",
+  "X_RETWEETS",
+  "X_REPLIERS",
+]);
+
+// Map our internal field names to Scravio's nested inputs/limits format
 function buildScravioPayload(data: {
   type: string;
   name: string;
@@ -48,37 +75,72 @@ function buildScravioPayload(data: {
   country?: string;
   language?: string;
 }): Record<string, unknown> {
-  const payload: Record<string, unknown> = {
-    type: data.type,
-    name: data.name,
-    maxEmailsToFind: data.target_count,
+  const type = data.type;
+
+  if (KEYWORD_TYPES.has(type)) {
+    return {
+      type,
+      inputs: {
+        keywords: Array.isArray(data.keywords) ? data.keywords : [data.keywords || ""],
+        country: (data.country || "us").toLowerCase(),
+        language: data.language || "en",
+      },
+      limits: {
+        maxEmails: data.target_count,
+      },
+    };
+  }
+
+  if (PROFILE_TYPES.has(type)) {
+    return {
+      type,
+      inputs: {
+        targetUser: (data.username || "").replace(/^@/, ""),
+      },
+      limits: {
+        maxProfilesToScan: data.target_count,
+      },
+    };
+  }
+
+  if (HASHTAG_TYPES.has(type)) {
+    const raw = data.hashtag || "";
+    const tags = raw.split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean);
+    return {
+      type,
+      inputs: {
+        hashtags: tags.length > 0 ? tags : [raw.replace(/^#/, "")],
+      },
+      limits: {
+        maxProfilesToScan: data.target_count,
+      },
+    };
+  }
+
+  if (POST_TYPES.has(type)) {
+    return {
+      type,
+      inputs: {
+        mediaUrl: data.post_url || "",
+      },
+      limits: {
+        maxProfilesToScan: data.target_count,
+      },
+    };
+  }
+
+  // Fallback for unknown types
+  return {
+    type,
+    inputs: {
+      keywords: data.keywords ? [data.keywords] : [],
+      country: (data.country || "us").toLowerCase(),
+      language: data.language || "en",
+    },
+    limits: {
+      maxEmails: data.target_count,
+    },
   };
-
-  // Username-based campaigns use targetUsername
-  if (data.username) {
-    payload.targetUsername = data.username.replace(/^@/, "");
-  }
-
-  // Hashtag campaigns
-  if (data.hashtag) {
-    payload.targetHashtag = data.hashtag.replace(/^#/, "");
-  }
-
-  // Keyword campaigns
-  if (data.keywords) {
-    payload.keywords = data.keywords;
-  }
-
-  // Post URL campaigns
-  if (data.post_url) {
-    payload.targetPostUrl = data.post_url;
-  }
-
-  // Optional filters
-  if (data.country) payload.country = data.country;
-  if (data.language) payload.language = data.language;
-
-  return payload;
 }
 
 export async function createCampaign(data: {
