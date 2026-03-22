@@ -10,89 +10,57 @@ const HEADERS = {
   "User-Agent": "GrowtorLeadFinder/1.0",
 };
 
-export async function GET() {
-  const results: Record<string, unknown> = {};
-
-  // Test 1: Create a small test campaign
+async function tryCreate(label: string, payload: Record<string, unknown>) {
   try {
-    const payload = {
-      type: "INSTAGRAM_KEYWORD_SEARCH",
-      keywords: ["fitness coach"],
-      maxEmailsToFind: 10,
-      country: "US",
-    };
-
-    const createRes = await fetch(`${SCRAVIO_BASE_URL}/campaigns`, {
+    const res = await fetch(`${SCRAVIO_BASE_URL}/campaigns`, {
       method: "POST",
       headers: HEADERS,
       body: JSON.stringify(payload),
     });
 
-    const createHeaders: Record<string, string> = {};
-    createRes.headers.forEach((v, k) => { createHeaders[k] = v; });
+    const text = await res.text();
+    let body: unknown;
+    try { body = JSON.parse(text); } catch { body = text; }
 
-    const createBody = await createRes.text();
-    let createParsed: unknown;
-    try { createParsed = JSON.parse(createBody); } catch { createParsed = createBody; }
-
-    results.createCampaign = {
-      requestBody: payload,
-      responseStatus: createRes.status,
-      responseHeaders: createHeaders,
-      responseBody: createParsed,
-    };
+    return { label, requestBody: payload, status: res.status, responseBody: body };
   } catch (error) {
-    results.createCampaign = { error: String(error) };
+    return { label, requestBody: payload, status: "FETCH_ERROR", responseBody: String(error) };
   }
+}
 
-  // Test 2: List all campaigns with statuses and errors
-  try {
-    const listRes = await fetch(`${SCRAVIO_BASE_URL}/campaigns`, {
-      method: "GET",
-      headers: HEADERS,
-    });
+export async function GET() {
+  const attempts = await Promise.all([
+    tryCreate("Attempt 1: keywords as array", {
+      type: "INSTAGRAM_KEYWORD_SEARCH",
+      keywords: ["fitness coach"],
+      maxEmailsToFind: 10,
+      country: "US",
+    }),
+    tryCreate("Attempt 2: keywords as string", {
+      type: "INSTAGRAM_KEYWORD_SEARCH",
+      keywords: "fitness coach",
+      maxEmailsToFind: 10,
+      country: "US",
+    }),
+    tryCreate("Attempt 3: with language", {
+      type: "INSTAGRAM_KEYWORD_SEARCH",
+      keywords: ["fitness coach"],
+      maxEmailsToFind: 10,
+      country: "US",
+      language: "en",
+    }),
+    tryCreate("Attempt 4: minimal", {
+      type: "INSTAGRAM_KEYWORD_SEARCH",
+      keywords: ["fitness coach"],
+      maxEmailsToFind: 10,
+    }),
+    tryCreate("Attempt 5: emailsToFind instead", {
+      type: "INSTAGRAM_KEYWORD_SEARCH",
+      keywords: ["fitness coach"],
+      emailsToFind: 10,
+      country: "US",
+    }),
+  ]);
 
-    const listHeaders: Record<string, string> = {};
-    listRes.headers.forEach((v, k) => { listHeaders[k] = v; });
-
-    const listBody = await listRes.text();
-    let listParsed: unknown;
-    try { listParsed = JSON.parse(listBody); } catch { listParsed = listBody; }
-
-    // Extract just statuses and errors from campaigns
-    let campaignSummaries: unknown = listParsed;
-    if (listParsed && typeof listParsed === "object") {
-      const obj = listParsed as Record<string, unknown>;
-      const campaigns = (obj.campaigns || obj.data || (Array.isArray(obj) ? obj : null)) as Record<string, unknown>[] | null;
-      if (Array.isArray(campaigns)) {
-        campaignSummaries = campaigns.map((c) => ({
-          id: c.id,
-          name: c.name,
-          type: c.type,
-          status: c.status,
-          state: c.state,
-          error: c.error,
-          failReason: c.failReason,
-          fail_reason: c.fail_reason,
-          errorMessage: c.errorMessage,
-          error_message: c.error_message,
-          leadsFound: c.leads_count || c.leadsFound,
-          maxEmailsToFind: c.maxEmailsToFind,
-          createdAt: c.created_at || c.createdAt,
-        }));
-      }
-    }
-
-    results.listCampaigns = {
-      responseStatus: listRes.status,
-      responseHeaders: listHeaders,
-      campaigns: campaignSummaries,
-    };
-  } catch (error) {
-    results.listCampaigns = { error: String(error) };
-  }
-
-  return Response.json(results, {
-    headers: { "Content-Type": "application/json" },
-  });
+  return Response.json({ attempts });
 }
