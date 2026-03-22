@@ -48,7 +48,9 @@ export async function processQueue() {
         data: {
           status: "RUNNING",
           scravioCampaignId:
+            scravioResult._id?.toString() ||
             scravioResult.id?.toString() ||
+            scravioResult.campaign?._id?.toString() ||
             scravioResult.campaign?.id?.toString(),
         },
       });
@@ -101,21 +103,29 @@ export async function syncCampaignStatus(campaignId: string) {
 
   try {
     const scravioData = await scravio.getCampaign(campaign.scravioCampaignId);
-    const rawStatus = scravioData.status || scravioData.campaign?.status || "";
+    const obj = scravioData.campaign || scravioData;
+    const rawStatus = obj.status || "";
     const leadsFound =
-      scravioData.leads_count || scravioData.campaign?.leads_count || 0;
+      obj.emailScanCount || obj.emails_found || obj.leads_count || obj.leadsFound || 0;
 
-    let status = rawStatus.toUpperCase();
-    if (
-      rawStatus === "fully_completed" ||
-      rawStatus === "FULLY_COMPLETED" ||
-      status === "FULLY_COMPLETED"
-    ) {
-      status = "COMPLETED";
-    }
+    // Map Scravio statuses to our statuses
+    const STATUS_MAP: Record<string, string> = {
+      fully_completed: "COMPLETED",
+      completed: "COMPLETED",
+      scraping: "RUNNING",
+      running: "RUNNING",
+      in_progress: "RUNNING",
+      failed: "FAILED",
+      error: "FAILED",
+      stopped: "STOPPED",
+      paused: "STOPPED",
+      queued: "RUNNING", // Scravio queued means it's accepted, treat as running on our end
+      pending: "RUNNING",
+    };
+    const status = STATUS_MAP[rawStatus.toLowerCase()] || rawStatus.toUpperCase();
 
     // Credit reconciliation from Scravio's creditSettlement
-    const settlement = scravioData.creditSettlement || scravioData.campaign?.creditSettlement;
+    const settlement = obj.creditSettlement;
     let creditsRefunded = 0;
     let actualCreditsUsed = campaign.creditsUsed;
 
@@ -189,6 +199,32 @@ export async function syncCampaignStatus(campaignId: string) {
     console.error(`Failed to sync campaign ${campaignId}:`, error);
     return campaign;
   }
+}
+
+export async function syncAllActiveCampaigns() {
+  const active = await prisma.campaign.findMany({
+    where: {
+      status: { in: ["RUNNING", "PENDING"] },
+      scravioCampaignId: { not: null },
+    },
+  });
+
+  let synced = 0;
+  let completed = 0;
+  let failed = 0;
+
+  for (const campaign of active) {
+    try {
+      const updated = await syncCampaignStatus(campaign.id);
+      synced++;
+      if (updated?.status === "COMPLETED") completed++;
+      if (updated?.status === "FAILED") failed++;
+    } catch (error) {
+      console.error(`Failed to sync campaign ${campaign.id}:`, error);
+    }
+  }
+
+  return { synced, completed, failed, total: active.length };
 }
 
 export async function getQueuePosition(campaignId: string): Promise<number> {

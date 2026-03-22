@@ -223,6 +223,7 @@ export default function HistoryPage() {
   const [page, setPage] = useState(1);
 
   const fetchData = useCallback(async () => {
+    await fetch("/api/scravio/sync", { method: "POST" }).catch(() => {});
     const data = await fetch("/api/scravio/campaigns").then((r) => r.json());
     setScrapes(data.campaigns || []);
     setQueuePositions(data.queuePositions || {});
@@ -232,13 +233,15 @@ export default function HistoryPage() {
   useEffect(() => {
     fetchData();
 
-    const interval = setInterval(async () => {
-      await fetch("/api/scravio/process-queue", { method: "POST" }).catch(() => {});
-      fetchData();
-    }, 30000);
+    const interval = setInterval(() => {
+      const hasActive = scrapes.some((s) =>
+        ["RUNNING", "PENDING", "QUEUED"].includes(s.status)
+      );
+      if (hasActive) fetchData();
+    }, 15000);
 
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, scrapes]);
 
   const totalPages = Math.ceil(scrapes.length / PAGE_SIZE);
   const paginated = scrapes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

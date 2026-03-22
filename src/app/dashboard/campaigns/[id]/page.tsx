@@ -40,13 +40,10 @@ export default function ScrapeDetailPage({
   const [stopping, setStopping] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchScrape();
-  }, [id]);
-
   async function fetchScrape() {
     setLoading(true);
     try {
+      // Sync with Scravio first (the GET handler calls syncCampaignStatus)
       const res = await fetch(`/api/scravio/campaigns/${id}`);
       const data = await res.json();
       setScrape(data.campaign);
@@ -62,6 +59,21 @@ export default function ScrapeDetailPage({
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    fetchScrape();
+  }, [id]);
+
+  // Auto-poll every 15 seconds while scrape is active
+  useEffect(() => {
+    if (!scrape || ["COMPLETED", "FAILED", "STOPPED"].includes(scrape.status)) return;
+
+    const interval = setInterval(() => {
+      fetchScrape();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [scrape?.status, id]);
 
   async function handleStop() {
     setStopping(true);

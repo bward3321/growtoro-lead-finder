@@ -228,6 +228,9 @@ export default function DashboardPage() {
   const [paymentBanner, setPaymentBanner] = useState<{ credits: number } | null>(null);
 
   const fetchData = useCallback(async () => {
+    // Sync all active campaigns with Scravio before fetching
+    await fetch("/api/scravio/sync", { method: "POST" }).catch(() => {});
+
     const [scrapeData, userData] = await Promise.all([
       fetch("/api/scravio/campaigns").then((r) => r.json()),
       fetch("/api/auth/me").then((r) => r.json()),
@@ -246,12 +249,11 @@ export default function DashboardPage() {
         .then((data) => {
           if (data.credited) {
             setPaymentBanner({ credits: data.credits });
-            fetchData(); // Refresh to show updated credits
+            fetchData();
           }
         })
         .catch(() => {});
 
-      // Clean up URL
       window.history.replaceState({}, "", "/dashboard");
     }
   }, [searchParams, fetchData]);
@@ -259,14 +261,18 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData();
 
-    // Poll every 30 seconds to check queue and update statuses
-    const interval = setInterval(async () => {
-      await fetch("/api/scravio/process-queue", { method: "POST" }).catch(() => {});
-      fetchData();
-    }, 30000);
+    // Poll every 15 seconds if there are active scrapes
+    const interval = setInterval(() => {
+      const hasActive = scrapes.some((s) =>
+        ["RUNNING", "PENDING", "QUEUED"].includes(s.status)
+      );
+      if (hasActive || scrapes.length === 0) {
+        fetchData();
+      }
+    }, 15000);
 
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, scrapes]);
 
   if (loading) {
     return (
