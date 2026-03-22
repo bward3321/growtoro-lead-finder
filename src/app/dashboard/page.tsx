@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   InstagramLogo,
@@ -189,10 +190,12 @@ function StatusBadge({ status, queuePosition }: { status: string; queuePosition?
 }
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
   const [scrapes, setScrapes] = useState<Scrape[]>([]);
   const [queuePositions, setQueuePositions] = useState<Record<string, number>>({});
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentBanner, setPaymentBanner] = useState<{ credits: number } | null>(null);
 
   const fetchData = useCallback(async () => {
     const [scrapeData, userData] = await Promise.all([
@@ -204,6 +207,24 @@ export default function DashboardPage() {
     setUser(userData.user);
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    // If redirected from Stripe with payment=success, verify and credit
+    if (searchParams.get("payment") === "success") {
+      fetch("/api/stripe/verify-session", { method: "POST" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.credited) {
+            setPaymentBanner({ credits: data.credits });
+            fetchData(); // Refresh to show updated credits
+          }
+        })
+        .catch(() => {});
+
+      // Clean up URL
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, [searchParams, fetchData]);
 
   useEffect(() => {
     fetchData();
@@ -227,6 +248,22 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {paymentBanner && (
+        <div className="flex items-center justify-between p-4 bg-success/10 border border-success/20 rounded-xl">
+          <p className="text-success font-medium">
+            Payment successful! {paymentBanner.credits.toLocaleString()} credits added to your account.
+          </p>
+          <button
+            onClick={() => setPaymentBanner(null)}
+            className="text-success/60 hover:text-success transition-colors"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Dashboard</h1>
