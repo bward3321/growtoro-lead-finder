@@ -33,13 +33,14 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `${pack.name} - ${pack.credits.toLocaleString()} Lead Credits`,
+              name: `${pack.name} - ${pack.credits.toLocaleString()} Verified Emails`,
             },
             unit_amount: pack.price,
           },
           quantity: 1,
         },
       ],
+      allow_promotion_codes: true,
       client_reference_id: session.id,
       metadata: {
         userId: session.id,
