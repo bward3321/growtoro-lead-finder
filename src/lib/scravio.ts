@@ -30,7 +30,13 @@ async function scravioFetch(path: string, options: RequestInit = {}): Promise<an
   console.log(`[Scravio] ${method} ${url} → ${res.status}`, JSON.stringify(data, null, 2));
 
   if (!res.ok) {
-    throw new Error(`Scravio API error ${res.status}: ${text}`);
+    const parsed = data && typeof data === "object" ? data as Record<string, unknown> : null;
+    const nested = parsed?.data && typeof parsed.data === "object" ? parsed.data as Record<string, unknown> : null;
+    const msg = parsed?.message || parsed?.error || nested?.message || text;
+    const err = new Error(`Scravio API error ${res.status}: ${msg}`);
+    (err as any).statusCode = res.status;
+    (err as any).scravioResponse = data;
+    throw err;
   }
 
   return data;
