@@ -44,14 +44,13 @@ export default function Home() {
         <div className="max-w-5xl text-center space-y-10">
           <h1 className="text-5xl sm:text-6xl font-bold tracking-tight leading-tight">
             Extract{" "}
-            <span className="bg-gradient-to-r from-accent to-accent-cyan bg-clip-text text-transparent">
+            <span className="gradient-shimmer bg-clip-text text-transparent">
               qualified leads
             </span>{" "}
             from social media
           </h1>
-          <p className="text-xl text-white max-w-3xl mx-auto leading-relaxed">
-            Scrape emails, profiles, and contact data from Instagram, Twitter, YouTube,
-            Facebook, LinkedIn, and TikTok. Pay per lead, no subscriptions.
+          <p className="text-lg text-white whitespace-nowrap">
+            Scrape emails, profiles, and contact data from Instagram, Twitter, YouTube, Facebook, LinkedIn, and TikTok. Pay per lead, no subscriptions.
           </p>
           <div className="flex flex-col items-center gap-4">
             <Link
