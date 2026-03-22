@@ -96,3 +96,23 @@ input, select, textarea {
 .platform-card:hover::after {
   animation: card-shine 0.8s ease-out forwards;
 }
+
+@keyframes badge-shine {
+  0% { background-position: -100% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.badge-shine {
+  background: linear-gradient(
+    120deg,
+    #3b82f6 0%,
+    #3b82f6 35%,
+    #93c5fd 42%,
+    #ffffff 50%,
+    #93c5fd 58%,
+    #3b82f6 65%,
+    #3b82f6 100%
+  );
+  background-size: 200% 100%;
+  animation: badge-shine 3s linear infinite;
+}

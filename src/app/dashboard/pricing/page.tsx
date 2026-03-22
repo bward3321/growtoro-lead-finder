@@ -77,7 +77,7 @@ export default function PricingPage() {
             }`}
           >
             {pack.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-accent text-white text-sm font-semibold rounded-full">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-1.5 text-sm font-semibold rounded-full text-white badge-shine">
                 Most Popular
               </div>
             )}
