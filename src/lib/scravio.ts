@@ -40,6 +40,10 @@ export async function listCampaigns() {
   return scravioFetch("/campaigns");
 }
 
+export async function listActiveCampaigns() {
+  return scravioFetch("/campaigns?status=scraping");
+}
+
 export async function getCampaign(id: string) {
   return scravioFetch(`/campaigns/${id}`);
 }

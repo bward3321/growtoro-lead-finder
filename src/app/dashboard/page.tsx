@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   InstagramLogo,
@@ -82,7 +82,6 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
       if (!data.exportId) return;
 
       const scravioCampaignId = data.scravioCampaignId;
-      // Poll for download URL
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         const pollRes = await fetch(
@@ -126,29 +125,97 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
   );
 }
 
+function StatusBadge({ status, queuePosition }: { status: string; queuePosition?: number }) {
+  if (status === "QUEUED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full text-orange-400 bg-orange-400/10">
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+        Queued{queuePosition ? ` (#${queuePosition})` : ""}
+      </span>
+    );
+  }
+
+  if (status === "RUNNING") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full text-accent-cyan bg-accent-cyan/10">
+        <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        Running
+      </span>
+    );
+  }
+
+  if (status === "COMPLETED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full text-success bg-success/10">
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        Completed
+      </span>
+    );
+  }
+
+  if (status === "FAILED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full text-danger bg-danger/10">
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Failed
+      </span>
+    );
+  }
+
+  const colorMap: Record<string, string> = {
+    STOPPED: "text-gray-400 bg-gray-400/10",
+    PENDING: "text-yellow-400 bg-yellow-400/10",
+  };
+
+  return (
+    <span
+      className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
+        colorMap[status] || "text-gray-400 bg-gray-400/10"
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
 export default function DashboardPage() {
   const [scrapes, setScrapes] = useState<Scrape[]>([]);
+  const [queuePositions, setQueuePositions] = useState<Record<string, number>>({});
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([
+  const fetchData = useCallback(async () => {
+    const [scrapeData, userData] = await Promise.all([
       fetch("/api/scravio/campaigns").then((r) => r.json()),
       fetch("/api/auth/me").then((r) => r.json()),
-    ]).then(([scrapeData, userData]) => {
-      setScrapes(scrapeData.campaigns || []);
-      setUser(userData.user);
-      setLoading(false);
-    });
+    ]);
+    setScrapes(scrapeData.campaigns || []);
+    setQueuePositions(scrapeData.queuePositions || {});
+    setUser(userData.user);
+    setLoading(false);
   }, []);
 
-  const statusColor: Record<string, string> = {
-    RUNNING: "text-accent-cyan bg-accent-cyan/10",
-    COMPLETED: "text-success bg-success/10",
-    STOPPED: "text-gray-400 bg-gray-400/10",
-    PENDING: "text-yellow-400 bg-yellow-400/10",
-    FAILED: "text-danger bg-danger/10",
-  };
+  useEffect(() => {
+    fetchData();
+
+    // Poll every 30 seconds to check queue and update statuses
+    const interval = setInterval(async () => {
+      await fetch("/api/scravio/process-queue", { method: "POST" }).catch(() => {});
+      fetchData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -173,7 +240,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="p-6 bg-card border border-card-border rounded-xl">
           <p className="text-base text-gray-300">Credit Balance</p>
           <p className="text-4xl font-bold text-accent-cyan mt-1">
@@ -184,8 +251,14 @@ export default function DashboardPage() {
           </Link>
         </div>
         <div className="p-6 bg-card border border-card-border rounded-xl">
-          <p className="text-base text-gray-300">Active Scrapes</p>
-          <p className="text-4xl font-bold text-white mt-1">
+          <p className="text-base text-gray-300">Queued</p>
+          <p className="text-4xl font-bold text-orange-400 mt-1">
+            {scrapes.filter((c) => c.status === "QUEUED").length}
+          </p>
+        </div>
+        <div className="p-6 bg-card border border-card-border rounded-xl">
+          <p className="text-base text-gray-300">Running</p>
+          <p className="text-4xl font-bold text-accent-cyan mt-1">
             {scrapes.filter((c) => c.status === "RUNNING").length}
           </p>
         </div>
@@ -259,13 +332,10 @@ export default function DashboardPage() {
                         {getSearchTarget(scrape)}
                       </td>
                       <td className="px-5 py-4">
-                        <span
-                          className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                            statusColor[scrape.status] || "text-gray-400 bg-gray-400/10"
-                          }`}
-                        >
-                          {scrape.status}
-                        </span>
+                        <StatusBadge
+                          status={scrape.status}
+                          queuePosition={queuePositions[scrape.id]}
+                        />
                       </td>
                       <td className="px-5 py-4 text-base text-white">
                         {scrape.leadsFound.toLocaleString()}
@@ -274,7 +344,9 @@ export default function DashboardPage() {
                         {new Date(scrape.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-5 py-4">
-                        {scrape.status === "RUNNING" || scrape.status === "PENDING" ? (
+                        {scrape.status === "QUEUED" ? (
+                          <span className="text-sm text-orange-400/70">Waiting...</span>
+                        ) : scrape.status === "RUNNING" ? (
                           <div className="w-28">
                             <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
                               <span>Progress</span>

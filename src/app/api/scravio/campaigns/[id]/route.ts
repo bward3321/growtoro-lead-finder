@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import * as scravio from "@/lib/scravio";
+import { syncCampaignStatus, getQueuePosition } from "@/lib/queue";
 
 export async function GET(
   _request: NextRequest,
@@ -17,26 +17,13 @@ export async function GET(
 
   if (!campaign) return Response.json({ error: "Not found" }, { status: 404 });
 
-  let scravioData = null;
-  if (campaign.scravioCampaignId) {
-    try {
-      scravioData = await scravio.getCampaign(campaign.scravioCampaignId);
-      const newStatus = scravioData.status || scravioData.campaign?.status;
-      const leadsFound = scravioData.leads_count || scravioData.campaign?.leads_count || 0;
-      if (newStatus || leadsFound) {
-        await prisma.campaign.update({
-          where: { id },
-          data: {
-            ...(newStatus ? { status: newStatus.toUpperCase() } : {}),
-            leadsFound,
-          },
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching scravio campaign:", error);
-    }
+  // Sync status from Scravio (also triggers queue if completed)
+  const updated = await syncCampaignStatus(id);
+
+  let queuePosition = 0;
+  if (updated?.status === "QUEUED") {
+    queuePosition = await getQueuePosition(id);
   }
 
-  const updated = await prisma.campaign.findFirst({ where: { id } });
-  return Response.json({ campaign: updated, scravioData });
+  return Response.json({ campaign: updated, queuePosition });
 }

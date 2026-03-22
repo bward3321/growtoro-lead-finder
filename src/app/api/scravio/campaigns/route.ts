@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import * as scravio from "@/lib/scravio";
+import { processQueue } from "@/lib/queue";
 
 export async function GET() {
   const session = await getSession();
@@ -12,7 +12,21 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return Response.json({ campaigns });
+  // Calculate queue positions for queued campaigns
+  const queuedCampaigns = campaigns.filter((c) => c.status === "QUEUED");
+  const allQueued = await prisma.campaign.findMany({
+    where: { status: "QUEUED" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+
+  const queuePositions: Record<string, number> = {};
+  for (const campaign of queuedCampaigns) {
+    const pos = allQueued.findIndex((q) => q.id === campaign.id);
+    queuePositions[campaign.id] = pos >= 0 ? pos + 1 : 0;
+  }
+
+  return Response.json({ campaigns, queuePositions });
 }
 
 export async function POST(request: NextRequest) {
@@ -28,24 +42,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const scravioResult = await scravio.createCampaign({
-      type: extractionType,
-      name,
-      target_count: targetCount,
-      ...config,
-    });
-
+    // Save as QUEUED instead of immediately calling Scravio
     const campaign = await prisma.campaign.create({
       data: {
         userId: session.id,
-        scravioCampaignId: scravioResult.id?.toString() || scravioResult.campaign?.id?.toString(),
         name,
         platform,
         extractionType,
         targetCount,
         creditsUsed: targetCount,
         config: JSON.stringify(config),
-        status: "RUNNING",
+        status: "QUEUED",
       },
     });
 
@@ -54,7 +61,15 @@ export async function POST(request: NextRequest) {
       data: { credits: { decrement: targetCount } },
     });
 
-    return Response.json({ campaign });
+    // Trigger queue processing to launch if slots available
+    await processQueue();
+
+    // Re-fetch to get updated status (may have changed from QUEUED to RUNNING)
+    const updated = await prisma.campaign.findUnique({
+      where: { id: campaign.id },
+    });
+
+    return Response.json({ campaign: updated });
   } catch (error) {
     console.error("Campaign creation error:", error);
     return Response.json({ error: "Failed to create campaign" }, { status: 500 });
