@@ -1,8 +1,14 @@
 const SCRAVIO_BASE_URL = "https://api.scravio.com/api";
 const API_KEY = process.env.SCRAVIO_API_KEY!;
 
-async function scravioFetch(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${SCRAVIO_BASE_URL}${path}`, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function scravioFetch(path: string, options: RequestInit = {}): Promise<any> {
+  const url = `${SCRAVIO_BASE_URL}${path}`;
+  const method = options.method || "GET";
+
+  console.log(`[Scravio] ${method} ${url}`, options.body ? JSON.parse(options.body as string) : "");
+
+  const res = await fetch(url, {
     ...options,
     headers: {
       "X-API-Key": API_KEY,
@@ -11,12 +17,66 @@ async function scravioFetch(path: string, options: RequestInit = {}) {
     },
   });
 
+  const text = await res.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
+
+  console.log(`[Scravio] ${method} ${url} → ${res.status}`, JSON.stringify(data, null, 2));
+
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(`Scravio API error ${res.status}: ${text}`);
   }
 
-  return res.json();
+  return data;
+}
+
+// Map our internal field names to what Scravio's API actually expects
+function buildScravioPayload(data: {
+  type: string;
+  name: string;
+  target_count: number;
+  keywords?: string;
+  hashtag?: string;
+  username?: string;
+  post_url?: string;
+  country?: string;
+  language?: string;
+}): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    type: data.type,
+    name: data.name,
+    maxEmailsToFind: data.target_count,
+  };
+
+  // Username-based campaigns use targetUsername
+  if (data.username) {
+    payload.targetUsername = data.username.replace(/^@/, "");
+  }
+
+  // Hashtag campaigns
+  if (data.hashtag) {
+    payload.targetHashtag = data.hashtag.replace(/^#/, "");
+  }
+
+  // Keyword campaigns
+  if (data.keywords) {
+    payload.keywords = data.keywords;
+  }
+
+  // Post URL campaigns
+  if (data.post_url) {
+    payload.targetPostUrl = data.post_url;
+  }
+
+  // Optional filters
+  if (data.country) payload.country = data.country;
+  if (data.language) payload.language = data.language;
+
+  return payload;
 }
 
 export async function createCampaign(data: {
@@ -30,9 +90,10 @@ export async function createCampaign(data: {
   country?: string;
   language?: string;
 }) {
+  const payload = buildScravioPayload(data);
   return scravioFetch("/campaigns", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -73,6 +134,10 @@ export async function createListExport(campaignId: string) {
 
 export async function getListExportDownload(campaignId: string, exportId: string) {
   return scravioFetch(`/campaigns/${campaignId}/list-exports/${exportId}/download`);
+}
+
+export async function getAuthMe() {
+  return scravioFetch("/auth/me");
 }
 
 export const PLATFORM_METHODS: Record<string, { label: string; type: string; inputs: string[] }[]> = {

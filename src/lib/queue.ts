@@ -56,10 +56,20 @@ export async function processQueue() {
       launched++;
     } catch (error) {
       console.error(`Failed to launch queued campaign ${campaign.id}:`, error);
-      await prisma.campaign.update({
-        where: { id: campaign.id },
-        data: { status: "FAILED" },
-      });
+
+      // Mark as failed and refund credits
+      await prisma.$transaction([
+        prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { status: "FAILED" },
+        }),
+        prisma.user.update({
+          where: { id: campaign.userId },
+          data: { credits: { increment: campaign.creditsUsed } },
+        }),
+      ]);
+
+      console.log(`Refunded ${campaign.creditsUsed} credits to user ${campaign.userId} for failed campaign ${campaign.id}`);
 
       const user = await prisma.user.findUnique({
         where: { id: campaign.userId },
@@ -109,8 +119,17 @@ export async function syncCampaignStatus(campaignId: string) {
       data: { status, leadsFound },
     });
 
-    // If just completed or failed, send email and trigger queue
+    // If just completed or failed, send email, refund if failed, and trigger queue
     if (campaign.status === "RUNNING" && (status === "COMPLETED" || status === "FAILED")) {
+      // Refund credits on failure
+      if (status === "FAILED" && campaign.creditsUsed > 0) {
+        await prisma.user.update({
+          where: { id: campaign.userId },
+          data: { credits: { increment: campaign.creditsUsed } },
+        });
+        console.log(`Refunded ${campaign.creditsUsed} credits to user ${campaign.userId} for failed campaign ${campaign.id}`);
+      }
+
       const user = await prisma.user.findUnique({
         where: { id: campaign.userId },
       });
