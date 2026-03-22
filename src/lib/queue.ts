@@ -43,15 +43,28 @@ export async function processQueue() {
         ...config,
       });
 
+      const scravioCampaignId =
+        scravioResult?.campaign?._id?.toString() ||
+        scravioResult?.campaign?.id?.toString() ||
+        scravioResult?._id?.toString() ||
+        scravioResult?.id?.toString() ||
+        null;
+
+      console.log(`[Queue] Scravio create response keys:`, Object.keys(scravioResult || {}));
+      if (scravioResult?.campaign) {
+        console.log(`[Queue] Scravio campaign object keys:`, Object.keys(scravioResult.campaign));
+      }
+      console.log(`[Queue] Extracted scravioCampaignId: ${scravioCampaignId}`);
+
+      if (!scravioCampaignId) {
+        console.error(`[Queue] WARNING: No campaign ID found in Scravio response for campaign ${campaign.id}. Full response:`, JSON.stringify(scravioResult));
+      }
+
       await prisma.campaign.update({
         where: { id: campaign.id },
         data: {
           status: "RUNNING",
-          scravioCampaignId:
-            scravioResult._id?.toString() ||
-            scravioResult.id?.toString() ||
-            scravioResult.campaign?._id?.toString() ||
-            scravioResult.campaign?.id?.toString(),
+          scravioCampaignId,
         },
       });
 
