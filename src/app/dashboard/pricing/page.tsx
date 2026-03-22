@@ -58,7 +58,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-10">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-white">Buy Credits</h1>
         <p className="text-base text-gray-300 mt-2">
@@ -66,7 +66,7 @@ export default function PricingPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {PACKS.map((pack) => (
           <div
             key={pack.id}
@@ -81,19 +81,19 @@ export default function PricingPage() {
                 Most Popular
               </div>
             )}
-            <div className="text-center space-y-5">
-              <h3 className="text-xl font-bold text-white">{pack.name}</h3>
+            <div className="text-center space-y-6">
+              <h3 className="text-2xl font-bold text-white">{pack.name}</h3>
               <div>
-                <span className="text-4xl font-bold text-white">{pack.price}</span>
+                <span className="text-5xl font-bold text-white">{pack.price}</span>
               </div>
-              <div className="space-y-1">
-                <p className="text-lg text-accent-cyan font-semibold whitespace-nowrap">{pack.credits} verified emails</p>
-                <p className="text-sm text-gray-300">{pack.perLead} per email</p>
+              <div className="space-y-2">
+                <p className="text-xl text-accent-cyan font-semibold whitespace-nowrap">{pack.credits} verified emails</p>
+                <p className="text-base text-gray-300">{pack.perLead} per email</p>
               </div>
               <button
                 onClick={() => handleBuy(pack.id)}
                 disabled={loading !== null}
-                className={`w-full py-3 text-base font-semibold rounded-lg transition-colors disabled:opacity-50 ${
+                className={`w-full py-4 text-lg font-semibold rounded-lg transition-colors disabled:opacity-50 ${
                   pack.popular
                     ? "bg-accent text-white hover:bg-accent/90"
                     : "bg-card border border-card-border text-white hover:bg-white/5"
