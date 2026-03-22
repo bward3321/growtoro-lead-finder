@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import DashboardNav from "@/components/DashboardNav";
 
 export default function DashboardLayout({
