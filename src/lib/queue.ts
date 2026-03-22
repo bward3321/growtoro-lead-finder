@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import * as scravio from "@/lib/scravio";
+import { sendScrapeCompletedEmail, sendScrapeFailedEmail } from "@/lib/email";
 
 const CONCURRENT_LIMIT = parseInt(process.env.SCRAVIO_CONCURRENT_LIMIT || "4", 10);
 
@@ -59,6 +60,20 @@ export async function processQueue() {
         where: { id: campaign.id },
         data: { status: "FAILED" },
       });
+
+      const user = await prisma.user.findUnique({
+        where: { id: campaign.userId },
+      });
+      if (user?.email) {
+        await sendScrapeFailedEmail(user.email, {
+          campaignId: campaign.id,
+          name: campaign.name,
+          platform: campaign.platform,
+          extractionType: campaign.extractionType,
+          config: campaign.config,
+          leadsFound: 0,
+        });
+      }
     }
   }
 
@@ -94,8 +109,34 @@ export async function syncCampaignStatus(campaignId: string) {
       data: { status, leadsFound },
     });
 
-    // If just completed, trigger the queue to launch next scrape
-    if (status === "COMPLETED" && campaign.status === "RUNNING") {
+    // If just completed or failed, send email and trigger queue
+    if (campaign.status === "RUNNING" && (status === "COMPLETED" || status === "FAILED")) {
+      const user = await prisma.user.findUnique({
+        where: { id: campaign.userId },
+      });
+
+      if (user?.email) {
+        if (status === "COMPLETED") {
+          await sendScrapeCompletedEmail(user.email, {
+            campaignId: campaign.id,
+            name: campaign.name,
+            platform: campaign.platform,
+            extractionType: campaign.extractionType,
+            config: campaign.config,
+            leadsFound,
+          });
+        } else {
+          await sendScrapeFailedEmail(user.email, {
+            campaignId: campaign.id,
+            name: campaign.name,
+            platform: campaign.platform,
+            extractionType: campaign.extractionType,
+            config: campaign.config,
+            leadsFound: 0,
+          });
+        }
+      }
+
       await processQueue();
     }
 
