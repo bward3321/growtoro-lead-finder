@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
 
 interface Scrape {
   id: string;
@@ -11,6 +12,7 @@ interface Scrape {
   targetCount: number;
   leadsFound: number;
   creditsUsed: number;
+  creditsRefunded: number;
   config: string;
   createdAt: string;
 }
@@ -30,11 +32,13 @@ export default function ScrapeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const [scrape, setScrape] = useState<Scrape | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchScrape();
@@ -82,6 +86,19 @@ export default function ScrapeDetailPage({
     }
   }
 
+  async function handleDelete() {
+    if (!confirm("Are you sure you want to delete this scrape?")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/scravio/campaigns/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/dashboard");
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   function downloadCSV() {
     if (leads.length === 0) return;
     const headers = ["username", "name", "email", "follower_count", "bio"];
@@ -106,6 +123,7 @@ export default function ScrapeDetailPage({
     COMPLETED: "text-success bg-success/10",
     STOPPED: "text-gray-400 bg-gray-400/10",
     PENDING: "text-yellow-400 bg-yellow-400/10",
+    QUEUED: "text-orange-400 bg-orange-400/10",
     FAILED: "text-danger bg-danger/10",
   };
 
@@ -130,6 +148,9 @@ export default function ScrapeDetailPage({
       ? Math.min(100, Math.round((scrape.leadsFound / scrape.targetCount) * 100))
       : 0;
 
+  const creditsReserved = scrape.creditsUsed + (scrape.creditsRefunded || 0);
+  const isTerminal = ["COMPLETED", "FAILED", "STOPPED"].includes(scrape.status);
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between">
@@ -147,6 +168,15 @@ export default function ScrapeDetailPage({
               className="px-6 py-3 text-base border border-danger/30 text-danger rounded-lg hover:bg-danger/10 transition-colors disabled:opacity-50"
             >
               {stopping ? "Stopping..." : "Stop Scrape"}
+            </button>
+          )}
+          {isTerminal && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-6 py-3 text-base border border-danger/30 text-danger rounded-lg hover:bg-danger/10 transition-colors disabled:opacity-50"
+            >
+              {deleting ? "Deleting..." : "Delete"}
             </button>
           )}
           <button
@@ -171,7 +201,7 @@ export default function ScrapeDetailPage({
           </span>
         </div>
         <div className="p-5 bg-card border border-card-border rounded-xl">
-          <p className="text-sm text-gray-300">Leads Found</p>
+          <p className="text-sm text-gray-300">Emails Found</p>
           <p className="text-4xl font-bold text-white mt-1">{scrape.leadsFound.toLocaleString()}</p>
         </div>
         <div className="p-5 bg-card border border-card-border rounded-xl">
@@ -183,6 +213,29 @@ export default function ScrapeDetailPage({
           <p className="text-4xl font-bold text-white mt-1">{scrape.creditsUsed.toLocaleString()}</p>
         </div>
       </div>
+
+      {/* Credit accounting */}
+      {isTerminal && (
+        <div className="p-5 bg-card border border-card-border rounded-xl">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">Credit Accounting</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Reserved</p>
+              <p className="text-xl font-bold text-white mt-1">{creditsReserved.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Used</p>
+              <p className="text-xl font-bold text-accent-cyan mt-1">{scrape.creditsUsed.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Refunded</p>
+              <p className={`text-xl font-bold mt-1 ${scrape.creditsRefunded > 0 ? "text-success" : "text-gray-500"}`}>
+                {(scrape.creditsRefunded || 0).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress bar */}
       <div>

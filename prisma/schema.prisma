@@ -30,6 +30,7 @@ model Campaign {
   status          String   @default("PENDING")
   targetCount     Int
   creditsUsed     Int      @default(0)
+  creditsRefunded Int      @default(0)
   config          String
   leadsFound      Int      @default(0)
   createdAt       DateTime @default(now())

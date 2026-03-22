@@ -57,11 +57,11 @@ export async function processQueue() {
     } catch (error) {
       console.error(`Failed to launch queued campaign ${campaign.id}:`, error);
 
-      // Mark as failed and refund credits
+      // Mark as failed and refund all credits
       await prisma.$transaction([
         prisma.campaign.update({
           where: { id: campaign.id },
-          data: { status: "FAILED" },
+          data: { status: "FAILED", creditsUsed: 0, creditsRefunded: campaign.creditsUsed },
         }),
         prisma.user.update({
           where: { id: campaign.userId },
@@ -114,22 +114,47 @@ export async function syncCampaignStatus(campaignId: string) {
       status = "COMPLETED";
     }
 
+    // Credit reconciliation from Scravio's creditSettlement
+    const settlement = scravioData.creditSettlement || scravioData.campaign?.creditSettlement;
+    let creditsRefunded = 0;
+    let actualCreditsUsed = campaign.creditsUsed;
+
+    if (status === "FAILED") {
+      // Full refund on failure
+      creditsRefunded = campaign.creditsUsed;
+      actualCreditsUsed = 0;
+    } else if (settlement) {
+      const charged = settlement.creditCharged ?? settlement.creditUsed ?? campaign.creditsUsed;
+      creditsRefunded = Math.max(0, campaign.creditsUsed - charged);
+      actualCreditsUsed = charged;
+      console.log(`[CreditSettlement] campaign=${campaignId} reserved=${campaign.creditsUsed} charged=${charged} refund=${creditsRefunded}`, settlement);
+    }
+
+    const updateData: Record<string, unknown> = { status, leadsFound };
+
+    // Only update credits if transitioning to a terminal state and not already refunded
+    const isTerminal = status === "COMPLETED" || status === "FAILED" || status === "STOPPED";
+    const wasRunning = campaign.status === "RUNNING";
+    if (isTerminal && wasRunning && creditsRefunded > 0 && campaign.creditsRefunded === 0) {
+      updateData.creditsUsed = actualCreditsUsed;
+      updateData.creditsRefunded = creditsRefunded;
+    }
+
     const updated = await prisma.campaign.update({
       where: { id: campaignId },
-      data: { status, leadsFound },
+      data: updateData,
     });
 
-    // If just completed or failed, send email, refund if failed, and trigger queue
-    if (campaign.status === "RUNNING" && (status === "COMPLETED" || status === "FAILED")) {
-      // Refund credits on failure
-      if (status === "FAILED" && campaign.creditsUsed > 0) {
-        await prisma.user.update({
-          where: { id: campaign.userId },
-          data: { credits: { increment: campaign.creditsUsed } },
-        });
-        console.log(`Refunded ${campaign.creditsUsed} credits to user ${campaign.userId} for failed campaign ${campaign.id}`);
-      }
+    // If transitioning to terminal state, refund credits and notify
+    if (isTerminal && wasRunning && creditsRefunded > 0 && campaign.creditsRefunded === 0) {
+      await prisma.user.update({
+        where: { id: campaign.userId },
+        data: { credits: { increment: creditsRefunded } },
+      });
+      console.log(`Refunded ${creditsRefunded} credits to user ${campaign.userId} for campaign ${campaign.id} (status: ${status})`);
+    }
 
+    if (isTerminal && wasRunning) {
       const user = await prisma.user.findUnique({
         where: { id: campaign.userId },
       });
