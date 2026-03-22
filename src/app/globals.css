@@ -23,3 +23,60 @@ body {
 input, select, textarea {
   color-scheme: dark;
 }
+
+@keyframes btn-shine {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  100% { transform: translateX(200%) rotate(25deg); }
+}
+
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transform: translateX(-100%) rotate(25deg);
+  animation: btn-shine 3s ease-in-out infinite;
+}
+
+@keyframes card-shine {
+  0% { opacity: 0; transform: translateX(-100%) rotate(15deg); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(200%) rotate(15deg); }
+}
+
+.platform-card {
+  position: relative;
+  overflow: hidden;
+}
+.platform-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  transform: translateX(-100%) rotate(15deg);
+  transition: none;
+  pointer-events: none;
+}
+.platform-card:hover::after {
+  animation: card-shine 0.8s ease-out forwards;
+}
