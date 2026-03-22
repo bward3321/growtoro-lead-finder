@@ -87,8 +87,8 @@ export default function PricingPage() {
                 <span className="text-4xl font-bold text-white">{pack.price}</span>
               </div>
               <div className="space-y-1">
-                <p className="text-lg text-accent-cyan font-semibold">{pack.credits} leads</p>
-                <p className="text-sm text-gray-300">{pack.perLead} per lead</p>
+                <p className="text-lg text-accent-cyan font-semibold">{pack.credits} verified emails</p>
+                <p className="text-sm text-gray-300">{pack.perLead} per email</p>
               </div>
               <button
                 onClick={() => handleBuy(pack.id)}
