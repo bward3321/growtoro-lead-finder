@@ -21,19 +21,19 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       <nav className="flex items-center justify-between px-8 py-5 border-b border-card-border">
-        <div className="text-xl font-bold tracking-tight">
-          <span className="text-accent">Growtoro</span> Lead Finder
-        </div>
+        <Link href="/">
+          <img src="/logo.png" alt="Growtoro Lead Finder" style={{ height: 32, width: "auto" }} />
+        </Link>
         <div className="flex items-center gap-4">
           <Link
             href="/login"
-            className="px-5 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors"
+            className="px-5 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
           >
             Log in
           </Link>
           <Link
             href="/signup"
-            className="px-5 py-2.5 text-sm font-semibold bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+            className="px-6 py-3 text-sm font-semibold bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
           >
             Sign up free
           </Link>
@@ -59,7 +59,7 @@ export default function Home() {
             >
               Sign up free
             </Link>
-            <span className="text-base text-muted">
+            <span className="text-base text-gray-400">
               No credit card required. Only pay when you buy credits.
             </span>
           </div>
@@ -71,14 +71,14 @@ export default function Home() {
                 className={`platform-card flex flex-col items-center justify-center gap-5 p-8 rounded-2xl border border-card-border bg-card transition-all duration-300 ${p.hoverBorder} ${p.hoverGlow}`}
               >
                 <p.Logo className="w-20 h-20" />
-                <span className="text-lg font-semibold text-foreground/80">{p.name}</span>
+                <span className="text-lg font-semibold text-white/80">{p.name}</span>
               </div>
             ))}
           </div>
         </div>
       </main>
 
-      <footer className="text-center py-6 text-sm text-muted border-t border-card-border">
+      <footer className="text-center py-6 text-sm text-gray-500 border-t border-card-border">
         Growtoro Lead Finder
       </footer>
     </div>

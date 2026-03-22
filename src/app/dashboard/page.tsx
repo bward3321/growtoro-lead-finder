@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-interface Campaign {
+interface Scrape {
   id: string;
   name: string;
   platform: string;
@@ -19,7 +19,7 @@ interface UserData {
 }
 
 export default function DashboardPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [scrapes, setScrapes] = useState<Scrape[]>([]);
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,8 +27,8 @@ export default function DashboardPage() {
     Promise.all([
       fetch("/api/scravio/campaigns").then((r) => r.json()),
       fetch("/api/auth/me").then((r) => r.json()),
-    ]).then(([campData, userData]) => {
-      setCampaigns(campData.campaigns || []);
+    ]).then(([scrapeData, userData]) => {
+      setScrapes(scrapeData.campaigns || []);
       setUser(userData.user);
       setLoading(false);
     });
@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const statusColor: Record<string, string> = {
     RUNNING: "text-accent-cyan bg-accent-cyan/10",
     COMPLETED: "text-success bg-success/10",
-    STOPPED: "text-muted bg-muted/10",
+    STOPPED: "text-gray-400 bg-gray-400/10",
     PENDING: "text-yellow-400 bg-yellow-400/10",
     FAILED: "text-danger bg-danger/10",
   };
@@ -45,7 +45,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted">Loading...</div>
+        <div className="text-gray-300 text-lg">Loading...</div>
       </div>
     );
   }
@@ -54,59 +54,59 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted mt-1">Manage your lead scraping campaigns</p>
+          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+          <p className="text-base text-gray-300 mt-1">Manage your lead scrapes</p>
         </div>
         <Link
           href="/dashboard/campaigns/new"
-          className="px-5 py-2.5 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 transition-colors"
+          className="px-6 py-3 bg-gradient-to-r from-accent to-accent-cyan text-white text-base font-semibold rounded-lg hover:from-accent/90 hover:to-accent-cyan/90 transition-all"
         >
-          + New Campaign
+          + New Scrape
         </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 bg-card border border-card-border rounded-xl">
-          <p className="text-sm text-muted">Credit Balance</p>
-          <p className="text-3xl font-bold text-accent-cyan mt-1">
+        <div className="p-6 bg-card border border-card-border rounded-xl">
+          <p className="text-base text-gray-300">Credit Balance</p>
+          <p className="text-4xl font-bold text-accent-cyan mt-1">
             {user?.credits?.toLocaleString() ?? 0}
           </p>
-          <Link href="/dashboard/pricing" className="text-xs text-accent mt-2 inline-block hover:underline">
+          <Link href="/dashboard/pricing" className="text-sm text-accent mt-2 inline-block hover:underline">
             Buy more credits
           </Link>
         </div>
-        <div className="p-5 bg-card border border-card-border rounded-xl">
-          <p className="text-sm text-muted">Active Campaigns</p>
-          <p className="text-3xl font-bold mt-1">
-            {campaigns.filter((c) => c.status === "RUNNING").length}
+        <div className="p-6 bg-card border border-card-border rounded-xl">
+          <p className="text-base text-gray-300">Active Scrapes</p>
+          <p className="text-4xl font-bold text-white mt-1">
+            {scrapes.filter((c) => c.status === "RUNNING").length}
           </p>
         </div>
-        <div className="p-5 bg-card border border-card-border rounded-xl">
-          <p className="text-sm text-muted">Total Leads Found</p>
-          <p className="text-3xl font-bold mt-1">
-            {campaigns.reduce((sum, c) => sum + c.leadsFound, 0).toLocaleString()}
+        <div className="p-6 bg-card border border-card-border rounded-xl">
+          <p className="text-base text-gray-300">Total Leads Found</p>
+          <p className="text-4xl font-bold text-white mt-1">
+            {scrapes.reduce((sum, c) => sum + c.leadsFound, 0).toLocaleString()}
           </p>
         </div>
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold mb-4">Campaigns</h2>
-        {campaigns.length === 0 ? (
+        <h2 className="text-xl font-semibold text-white mb-4">Scrapes</h2>
+        {scrapes.length === 0 ? (
           <div className="text-center py-16 bg-card border border-card-border rounded-xl">
-            <p className="text-muted">No campaigns yet</p>
+            <p className="text-gray-300 text-lg">No scrapes yet</p>
             <Link
               href="/dashboard/campaigns/new"
-              className="inline-block mt-3 text-sm text-accent hover:underline"
+              className="inline-block mt-3 text-base text-accent hover:underline"
             >
-              Create your first campaign
+              Create your first scrape
             </Link>
           </div>
         ) : (
           <div className="bg-card border border-card-border rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-card-border text-left text-xs text-muted uppercase tracking-wider">
-                  <th className="px-5 py-3">Campaign</th>
+                <tr className="border-b border-card-border text-left text-sm text-gray-400 uppercase tracking-wider">
+                  <th className="px-5 py-3">Scrape</th>
                   <th className="px-5 py-3">Platform</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Leads</th>
@@ -115,39 +115,39 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {campaigns.map((campaign) => (
+                {scrapes.map((scrape) => (
                   <tr
-                    key={campaign.id}
+                    key={scrape.id}
                     className="border-b border-card-border last:border-0 hover:bg-white/[0.02] transition-colors"
                   >
                     <td className="px-5 py-4">
                       <Link
-                        href={`/dashboard/campaigns/${campaign.id}`}
-                        className="font-medium hover:text-accent transition-colors"
+                        href={`/dashboard/campaigns/${scrape.id}`}
+                        className="text-base font-medium text-white hover:text-accent transition-colors"
                       >
-                        {campaign.name}
+                        {scrape.name}
                       </Link>
                     </td>
-                    <td className="px-5 py-4 text-sm text-muted capitalize">
-                      {campaign.platform}
+                    <td className="px-5 py-4 text-base text-gray-300 capitalize">
+                      {scrape.platform}
                     </td>
                     <td className="px-5 py-4">
                       <span
-                        className={`inline-block px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                          statusColor[campaign.status] || "text-muted bg-muted/10"
+                        className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
+                          statusColor[scrape.status] || "text-gray-400 bg-gray-400/10"
                         }`}
                       >
-                        {campaign.status}
+                        {scrape.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-sm">
-                      {campaign.leadsFound.toLocaleString()}
+                    <td className="px-5 py-4 text-base text-white">
+                      {scrape.leadsFound.toLocaleString()}
                     </td>
-                    <td className="px-5 py-4 text-sm text-muted">
-                      {campaign.targetCount.toLocaleString()}
+                    <td className="px-5 py-4 text-base text-gray-300">
+                      {scrape.targetCount.toLocaleString()}
                     </td>
-                    <td className="px-5 py-4 text-sm text-muted">
-                      {new Date(campaign.createdAt).toLocaleDateString()}
+                    <td className="px-5 py-4 text-base text-gray-300">
+                      {new Date(scrape.createdAt).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}

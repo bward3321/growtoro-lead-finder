@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 
-interface Campaign {
+interface Scrape {
   id: string;
   name: string;
   platform: string;
@@ -24,28 +24,28 @@ interface Lead {
   [key: string]: unknown;
 }
 
-export default function CampaignDetailPage({
+export default function ScrapeDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [scrape, setScrape] = useState<Scrape | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [stopping, setStopping] = useState(false);
 
   useEffect(() => {
-    fetchCampaign();
+    fetchScrape();
   }, [id]);
 
-  async function fetchCampaign() {
+  async function fetchScrape() {
     setLoading(true);
     try {
       const res = await fetch(`/api/scravio/campaigns/${id}`);
       const data = await res.json();
-      setCampaign(data.campaign);
+      setScrape(data.campaign);
 
       if (data.campaign?.status === "COMPLETED" || data.campaign?.leadsFound > 0) {
         const leadsRes = await fetch(`/api/scravio/campaigns/${id}/leads`);
@@ -53,7 +53,7 @@ export default function CampaignDetailPage({
         setLeads(leadsData.leads || leadsData.data || []);
       }
     } catch (err) {
-      console.error("Failed to fetch campaign:", err);
+      console.error("Failed to fetch scrape:", err);
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ export default function CampaignDetailPage({
     setStopping(true);
     try {
       await fetch(`/api/scravio/campaigns/${id}/stop`, { method: "POST" });
-      await fetchCampaign();
+      await fetchScrape();
     } finally {
       setStopping(false);
     }
@@ -96,7 +96,7 @@ export default function CampaignDetailPage({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${campaign?.name || "leads"}.csv`;
+    a.download = `${scrape?.name || "leads"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -104,7 +104,7 @@ export default function CampaignDetailPage({
   const statusColor: Record<string, string> = {
     RUNNING: "text-accent-cyan bg-accent-cyan/10",
     COMPLETED: "text-success bg-success/10",
-    STOPPED: "text-muted bg-muted/10",
+    STOPPED: "text-gray-400 bg-gray-400/10",
     PENDING: "text-yellow-400 bg-yellow-400/10",
     FAILED: "text-danger bg-danger/10",
   };
@@ -112,46 +112,46 @@ export default function CampaignDetailPage({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted">Loading campaign...</div>
+        <div className="text-gray-300 text-lg">Loading scrape...</div>
       </div>
     );
   }
 
-  if (!campaign) {
+  if (!scrape) {
     return (
       <div className="text-center py-16">
-        <p className="text-muted">Campaign not found</p>
+        <p className="text-gray-300 text-lg">Scrape not found</p>
       </div>
     );
   }
 
   const progress =
-    campaign.targetCount > 0
-      ? Math.min(100, Math.round((campaign.leadsFound / campaign.targetCount) * 100))
+    scrape.targetCount > 0
+      ? Math.min(100, Math.round((scrape.leadsFound / scrape.targetCount) * 100))
       : 0;
 
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{campaign.name}</h1>
-          <p className="text-sm text-muted mt-1">
-            {campaign.platform} &middot; {campaign.extractionType}
+          <h1 className="text-3xl font-bold text-white">{scrape.name}</h1>
+          <p className="text-base text-gray-300 mt-1">
+            {scrape.platform} &middot; {scrape.extractionType}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {campaign.status === "RUNNING" && (
+          {scrape.status === "RUNNING" && (
             <button
               onClick={handleStop}
               disabled={stopping}
-              className="px-4 py-2 text-sm border border-danger/30 text-danger rounded-lg hover:bg-danger/10 transition-colors disabled:opacity-50"
+              className="px-6 py-3 text-base border border-danger/30 text-danger rounded-lg hover:bg-danger/10 transition-colors disabled:opacity-50"
             >
-              {stopping ? "Stopping..." : "Stop Campaign"}
+              {stopping ? "Stopping..." : "Stop Scrape"}
             </button>
           )}
           <button
-            onClick={() => fetchCampaign()}
-            className="px-4 py-2 text-sm border border-card-border rounded-lg hover:bg-card transition-colors"
+            onClick={() => fetchScrape()}
+            className="px-6 py-3 text-base border border-card-border text-gray-200 rounded-lg hover:bg-card transition-colors"
           >
             Refresh
           </button>
@@ -160,37 +160,37 @@ export default function CampaignDetailPage({
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 bg-card border border-card-border rounded-xl">
-          <p className="text-xs text-muted">Status</p>
+        <div className="p-5 bg-card border border-card-border rounded-xl">
+          <p className="text-sm text-gray-300">Status</p>
           <span
-            className={`inline-block mt-1 px-2.5 py-0.5 text-xs font-medium rounded-full ${
-              statusColor[campaign.status] || "text-muted bg-muted/10"
+            className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded-full ${
+              statusColor[scrape.status] || "text-gray-400 bg-gray-400/10"
             }`}
           >
-            {campaign.status}
+            {scrape.status}
           </span>
         </div>
-        <div className="p-4 bg-card border border-card-border rounded-xl">
-          <p className="text-xs text-muted">Leads Found</p>
-          <p className="text-xl font-bold mt-1">{campaign.leadsFound.toLocaleString()}</p>
+        <div className="p-5 bg-card border border-card-border rounded-xl">
+          <p className="text-sm text-gray-300">Leads Found</p>
+          <p className="text-4xl font-bold text-white mt-1">{scrape.leadsFound.toLocaleString()}</p>
         </div>
-        <div className="p-4 bg-card border border-card-border rounded-xl">
-          <p className="text-xs text-muted">Target</p>
-          <p className="text-xl font-bold mt-1">{campaign.targetCount.toLocaleString()}</p>
+        <div className="p-5 bg-card border border-card-border rounded-xl">
+          <p className="text-sm text-gray-300">Target</p>
+          <p className="text-4xl font-bold text-white mt-1">{scrape.targetCount.toLocaleString()}</p>
         </div>
-        <div className="p-4 bg-card border border-card-border rounded-xl">
-          <p className="text-xs text-muted">Credits Used</p>
-          <p className="text-xl font-bold mt-1">{campaign.creditsUsed.toLocaleString()}</p>
+        <div className="p-5 bg-card border border-card-border rounded-xl">
+          <p className="text-sm text-gray-300">Credits Used</p>
+          <p className="text-4xl font-bold text-white mt-1">{scrape.creditsUsed.toLocaleString()}</p>
         </div>
       </div>
 
       {/* Progress bar */}
       <div>
-        <div className="flex items-center justify-between text-sm mb-2">
-          <span className="text-muted">Progress</span>
-          <span className="font-medium">{progress}%</span>
+        <div className="flex items-center justify-between text-base mb-2">
+          <span className="text-gray-300">Progress</span>
+          <span className="font-medium text-white">{progress}%</span>
         </div>
-        <div className="h-2 bg-card border border-card-border rounded-full overflow-hidden">
+        <div className="h-3 bg-card border border-card-border rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-accent to-accent-cyan rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
@@ -202,18 +202,18 @@ export default function CampaignDetailPage({
       {leads.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Leads ({leads.length})</h2>
-            <div className="flex gap-2">
+            <h2 className="text-xl font-semibold text-white">Leads ({leads.length})</h2>
+            <div className="flex gap-3">
               <button
                 onClick={downloadCSV}
-                className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+                className="px-6 py-3 text-base bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
               >
                 Download CSV
               </button>
               <button
                 onClick={handleExport}
                 disabled={exporting}
-                className="px-4 py-2 text-sm border border-card-border rounded-lg hover:bg-card transition-colors disabled:opacity-50"
+                className="px-6 py-3 text-base border border-card-border text-gray-200 rounded-lg hover:bg-card transition-colors disabled:opacity-50"
               >
                 {exporting ? "Exporting..." : "Export via Scravio"}
               </button>
@@ -223,7 +223,7 @@ export default function CampaignDetailPage({
           <div className="bg-card border border-card-border rounded-xl overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-card-border text-left text-xs text-muted uppercase tracking-wider">
+                <tr className="border-b border-card-border text-left text-sm text-gray-400 uppercase tracking-wider">
                   <th className="px-5 py-3">Username</th>
                   <th className="px-5 py-3">Name</th>
                   <th className="px-5 py-3">Email</th>
@@ -237,15 +237,15 @@ export default function CampaignDetailPage({
                     key={i}
                     className="border-b border-card-border last:border-0 hover:bg-white/[0.02]"
                   >
-                    <td className="px-5 py-3 text-sm">{lead.username || "-"}</td>
-                    <td className="px-5 py-3 text-sm">{lead.name || "-"}</td>
-                    <td className="px-5 py-3 text-sm text-accent">
+                    <td className="px-5 py-3 text-base text-white">{lead.username || "-"}</td>
+                    <td className="px-5 py-3 text-base text-gray-200">{lead.name || "-"}</td>
+                    <td className="px-5 py-3 text-base text-accent">
                       {lead.email || "-"}
                     </td>
-                    <td className="px-5 py-3 text-sm">
+                    <td className="px-5 py-3 text-base text-white">
                       {lead.follower_count?.toLocaleString() || "-"}
                     </td>
-                    <td className="px-5 py-3 text-sm text-muted max-w-xs truncate">
+                    <td className="px-5 py-3 text-base text-gray-300 max-w-xs truncate">
                       {lead.bio || "-"}
                     </td>
                   </tr>

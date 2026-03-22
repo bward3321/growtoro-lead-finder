@@ -47,44 +47,44 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <Link href="/" className="text-2xl font-bold tracking-tight">
-            <span className="text-accent">Growtoro</span> Lead Finder
+          <Link href="/">
+            <img src="/logo.png" alt="Growtoro Lead Finder" style={{ height: 32, width: "auto" }} className="mx-auto" />
           </Link>
-          <h2 className="mt-6 text-xl font-semibold">Sign up free</h2>
-          <p className="mt-1 text-sm text-muted">
+          <h2 className="mt-6 text-2xl font-bold text-white">Sign up free</h2>
+          <p className="mt-1 text-base text-gray-300">
             No credit card required. Start scraping in seconds.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-4 text-base text-danger bg-danger/10 border border-danger/20 rounded-lg">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">Email</label>
+            <label className="block text-base font-medium text-white mb-2">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
-              className="w-full px-4 py-2.5 bg-card border border-card-border rounded-lg text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+              className="w-full px-5 py-3 bg-card border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">Password</label>
+            <label className="block text-base font-medium text-white mb-2">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full px-4 py-2.5 bg-card border border-card-border rounded-lg text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+              className="w-full px-5 py-3 bg-card border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
               placeholder="8+ characters"
             />
           </div>
@@ -92,17 +92,17 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 text-base bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Creating account..." : "Create free account"}
           </button>
 
-          <p className="text-xs text-center text-muted">
+          <p className="text-sm text-center text-gray-400">
             You only pay when you purchase lead credits.
           </p>
         </form>
 
-        <p className="text-center text-sm text-muted">
+        <p className="text-center text-base text-gray-300">
           Already have an account?{" "}
           <Link href="/login" className="text-accent hover:underline">
             Sign in
