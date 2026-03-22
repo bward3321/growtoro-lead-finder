@@ -31,8 +31,12 @@ input, select, textarea {
 }
 
 .gradient-shimmer {
-  background: linear-gradient(90deg, #3b82f6, #06b6d4, #3b82f6, #06b6d4);
-  background-size: 200% 100%;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4, #3b82f6, #06b6d4) !important;
+  background-size: 200% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
   animation: gradient-shimmer 3s ease-in-out infinite;
 }
 

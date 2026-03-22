@@ -42,9 +42,9 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-8 py-16">
         <div className="max-w-5xl text-center space-y-10">
-          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight leading-tight">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight whitespace-nowrap">
             Extract{" "}
-            <span className="gradient-shimmer bg-clip-text text-transparent">
+            <span className="gradient-shimmer">
               qualified leads
             </span>{" "}
             from social media
