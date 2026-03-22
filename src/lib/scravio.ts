@@ -13,6 +13,8 @@ async function scravioFetch(path: string, options: RequestInit = {}): Promise<an
     headers: {
       "X-API-Key": API_KEY,
       "Content-Type": "application/json",
+      "Accept": "application/json",
+      "User-Agent": "GrowtorLeadFinder/1.0",
       ...options.headers,
     },
   });
