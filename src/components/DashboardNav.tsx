@@ -47,6 +47,16 @@ export default function DashboardNav() {
               Dashboard
             </Link>
             <Link
+              href="/dashboard/history"
+              className={`px-4 py-2 text-base rounded-md transition-colors ${
+                pathname === "/dashboard/history"
+                  ? "text-white bg-accent/20 font-medium"
+                  : "text-gray-300 hover:text-white"
+              }`}
+            >
+              History
+            </Link>
+            <Link
               href="/dashboard/campaigns/new"
               className={`px-4 py-2 text-base rounded-md transition-colors ${
                 pathname === "/dashboard/campaigns/new"

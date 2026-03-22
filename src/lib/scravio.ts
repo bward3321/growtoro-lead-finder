@@ -60,6 +60,17 @@ export async function getExportUrl(campaignId: string, exportId: string) {
   return scravioFetch(`/campaigns/${campaignId}/exports/${exportId}`);
 }
 
+export async function createListExport(campaignId: string) {
+  return scravioFetch(`/campaigns/${campaignId}/list-exports`, {
+    method: "POST",
+    body: JSON.stringify({ emailOnly: true, fileFormat: "csv" }),
+  });
+}
+
+export async function getListExportDownload(campaignId: string, exportId: string) {
+  return scravioFetch(`/campaigns/${campaignId}/list-exports/${exportId}/download`);
+}
+
 export const PLATFORM_METHODS: Record<string, { label: string; type: string; inputs: string[] }[]> = {
   instagram: [
     { label: "Keyword Search", type: "INSTAGRAM_KEYWORD_SEARCH", inputs: ["keywords", "country", "language"] },

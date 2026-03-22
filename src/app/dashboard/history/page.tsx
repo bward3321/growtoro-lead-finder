@@ -25,10 +25,6 @@ interface Scrape {
   scravioCampaignId?: string;
 }
 
-interface UserData {
-  credits: number;
-}
-
 const PLATFORM_LOGOS: Record<string, ComponentType<{ className?: string }>> = {
   instagram: InstagramLogo,
   twitter: TwitterLogo,
@@ -82,7 +78,6 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
       if (!data.exportId) return;
 
       const scravioCampaignId = data.scravioCampaignId;
-      // Poll for download URL
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         const pollRes = await fetch(
@@ -126,20 +121,20 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
   );
 }
 
-export default function DashboardPage() {
+const PAGE_SIZE = 20;
+
+export default function HistoryPage() {
   const [scrapes, setScrapes] = useState<Scrape[]>([]);
-  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/scravio/campaigns").then((r) => r.json()),
-      fetch("/api/auth/me").then((r) => r.json()),
-    ]).then(([scrapeData, userData]) => {
-      setScrapes(scrapeData.campaigns || []);
-      setUser(userData.user);
-      setLoading(false);
-    });
+    fetch("/api/scravio/campaigns")
+      .then((r) => r.json())
+      .then((data) => {
+        setScrapes(data.campaigns || []);
+        setLoading(false);
+      });
   }, []);
 
   const statusColor: Record<string, string> = {
@@ -149,6 +144,9 @@ export default function DashboardPage() {
     PENDING: "text-yellow-400 bg-yellow-400/10",
     FAILED: "text-danger bg-danger/10",
   };
+
+  const totalPages = Math.ceil(scrapes.length / PAGE_SIZE);
+  const paginated = scrapes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   if (loading) {
     return (
@@ -160,76 +158,40 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-          <p className="text-base text-gray-300 mt-1">Manage your lead scrapes</p>
-        </div>
-        <Link
-          href="/dashboard/campaigns/new"
-          className="px-6 py-3 bg-gradient-to-r from-accent to-accent-cyan text-white text-base font-semibold rounded-lg hover:from-accent/90 hover:to-accent-cyan/90 transition-all"
-        >
-          + New Scrape
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-6 bg-card border border-card-border rounded-xl">
-          <p className="text-base text-gray-300">Credit Balance</p>
-          <p className="text-4xl font-bold text-accent-cyan mt-1">
-            {user?.credits?.toLocaleString() ?? 0}
-          </p>
-          <Link href="/dashboard/pricing" className="text-sm text-accent mt-2 inline-block hover:underline">
-            Buy more credits
-          </Link>
-        </div>
-        <div className="p-6 bg-card border border-card-border rounded-xl">
-          <p className="text-base text-gray-300">Active Scrapes</p>
-          <p className="text-4xl font-bold text-white mt-1">
-            {scrapes.filter((c) => c.status === "RUNNING").length}
-          </p>
-        </div>
-        <div className="p-6 bg-card border border-card-border rounded-xl">
-          <p className="text-base text-gray-300">Emails Found</p>
-          <p className="text-4xl font-bold text-white mt-1">
-            {scrapes.reduce((sum, c) => sum + c.leadsFound, 0).toLocaleString()}
-          </p>
-        </div>
-      </div>
-
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-white">Recent Scrapes</h2>
-          <Link href="/dashboard/history" className="text-sm text-accent hover:underline">
-            View all history
+        <h1 className="text-3xl font-bold text-white">Scrape History</h1>
+        <p className="text-base text-gray-300 mt-1">
+          All past scrapes ({scrapes.length} total)
+        </p>
+      </div>
+
+      {scrapes.length === 0 ? (
+        <div className="text-center py-16 bg-card border border-card-border rounded-xl">
+          <p className="text-gray-300 text-lg">No scrapes yet</p>
+          <Link
+            href="/dashboard/campaigns/new"
+            className="inline-block mt-3 text-base text-accent hover:underline"
+          >
+            Create your first scrape
           </Link>
         </div>
-        {scrapes.length === 0 ? (
-          <div className="text-center py-16 bg-card border border-card-border rounded-xl">
-            <p className="text-gray-300 text-lg">No scrapes yet</p>
-            <Link
-              href="/dashboard/campaigns/new"
-              className="inline-block mt-3 text-base text-accent hover:underline"
-            >
-              Create your first scrape
-            </Link>
-          </div>
-        ) : (
+      ) : (
+        <>
           <div className="bg-card border border-card-border rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-card-border text-left text-sm text-gray-400 uppercase tracking-wider">
+                  <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3">Platform</th>
                   <th className="px-5 py-3">Method</th>
-                  <th className="px-5 py-3">Target</th>
+                  <th className="px-5 py-3">Target / Keywords</th>
+                  <th className="px-5 py-3">Emails Found</th>
                   <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Emails</th>
-                  <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {scrapes.map((scrape) => {
+                {paginated.map((scrape) => {
                   const Logo = PLATFORM_LOGOS[scrape.platform];
                   const progress =
                     scrape.targetCount > 0
@@ -241,6 +203,13 @@ export default function DashboardPage() {
                       key={scrape.id}
                       className="border-b border-card-border last:border-0 hover:bg-white/[0.02] transition-colors"
                     >
+                      <td className="px-5 py-4 text-base text-gray-300 whitespace-nowrap">
+                        {new Date(scrape.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </td>
                       <td className="px-5 py-4">
                         <Link
                           href={`/dashboard/campaigns/${scrape.id}`}
@@ -255,8 +224,11 @@ export default function DashboardPage() {
                       <td className="px-5 py-4 text-base text-gray-300">
                         {METHOD_LABELS[scrape.extractionType] || scrape.extractionType}
                       </td>
-                      <td className="px-5 py-4 text-base text-gray-300 max-w-[200px] truncate">
+                      <td className="px-5 py-4 text-base text-gray-300 max-w-[250px] truncate">
                         {getSearchTarget(scrape)}
+                      </td>
+                      <td className="px-5 py-4 text-base text-white font-medium">
+                        {scrape.leadsFound.toLocaleString()}
                       </td>
                       <td className="px-5 py-4">
                         <span
@@ -266,12 +238,6 @@ export default function DashboardPage() {
                         >
                           {scrape.status}
                         </span>
-                      </td>
-                      <td className="px-5 py-4 text-base text-white">
-                        {scrape.leadsFound.toLocaleString()}
-                      </td>
-                      <td className="px-5 py-4 text-base text-gray-300">
-                        {new Date(scrape.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-5 py-4">
                         {scrape.status === "RUNNING" || scrape.status === "PENDING" ? (
@@ -299,8 +265,40 @@ export default function DashboardPage() {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-300 bg-card border border-card-border rounded-lg hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    p === page
+                      ? "bg-accent text-white"
+                      : "text-gray-300 bg-card border border-card-border hover:bg-white/5"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-4 py-2 text-sm font-medium text-gray-300 bg-card border border-card-border rounded-lg hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
