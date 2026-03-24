@@ -29,6 +29,17 @@ async function callSphereScout(url: string) {
   return { status: res.status, ok: res.ok, body };
 }
 
+function buildCompaniesUrl(categoryId: number, countries: string, level2_locations: string): string {
+  let url = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${encodeURIComponent(countries)}`;
+  if (level2_locations) {
+    const states = level2_locations.split(",").map((s) => s.trim()).filter(Boolean);
+    for (const state of states) {
+      url += `&level2_locations=${encodeURIComponent(state)}`;
+    }
+  }
+  return url;
+}
+
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -47,36 +58,14 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "category must be a valid integer ID" }, { status: 400 });
   }
 
-  // Build URL — always start with category + countries (proven working)
-  let url = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${encodeURIComponent(countries)}`;
+  const url = buildCompaniesUrl(categoryId, countries, level2_locations);
+  console.log(`[SphereScout Preview] Final URL: ${url}`);
 
-  // If states are provided, add them as repeated query params
-  if (level2_locations) {
-    const states = level2_locations.split(",").map((s) => s.trim()).filter(Boolean);
-    for (const state of states) {
-      url += `&level2_locations=${encodeURIComponent(state)}`;
-    }
-  }
-
-  console.log(`[SphereScout Preview] Constructed URL: ${url}`);
-
-  // First call — with states if provided
-  let result = await callSphereScout(url);
-
-  // If states caused 0 results, retry without them
-  const data = result.body as Record<string, unknown> | null;
-  if (result.ok && data && typeof data === "object" && (data.totalCount === 0 || data.total_count === 0) && level2_locations) {
-    console.log("[SphereScout Preview] Got 0 with states, retrying without level2_locations");
-    const fallbackUrl = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${encodeURIComponent(countries)}`;
-    result = await callSphereScout(fallbackUrl);
-  }
+  const result = await callSphereScout(url);
 
   if (!result.ok) {
     return Response.json(
-      {
-        error: `SphereScout API error ${result.status}`,
-        debug: { url, spherescoutStatus: result.status, spherescoutBody: result.body },
-      },
+      { error: `SphereScout API error ${result.status}`, debug: { url, body: result.body } },
       { status: 502 }
     );
   }
@@ -86,10 +75,6 @@ export async function GET(request: NextRequest) {
   return Response.json({
     totalCount: responseBody.totalCount ?? responseBody.total_count ?? 0,
     preview: responseBody.preview ?? responseBody.results ?? [],
-    debug: {
-      urlCalled: url,
-      spherescoutStatus: result.status,
-      responseKeys: responseBody ? Object.keys(responseBody) : [],
-    },
+    debug: { urlCalled: url, responseKeys: responseBody ? Object.keys(responseBody) : [] },
   });
 }

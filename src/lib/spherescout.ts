@@ -106,16 +106,16 @@ export async function downloadCsv(params: {
   countries: string;
   level2_locations?: string;
 }): Promise<{ status: string; search_id: string; lead_count: number }> {
-  const query = new URLSearchParams();
-  query.set("category", String(params.category));
-  query.set("countries", params.countries);
+  let url = `/api/download-csv/?category=${params.category}&countries=${encodeURIComponent(params.countries)}`;
   if (params.level2_locations) {
-    query.set("level2_locations", params.level2_locations);
+    const states = params.level2_locations.split(",").map((s) => s.trim()).filter(Boolean);
+    for (const state of states) {
+      url += `&level2_locations=${encodeURIComponent(state)}`;
+    }
   }
-  query.set("export_format", "csv");
-  return spherescoutFetch(`/api/download-csv/?${query.toString()}`, {
-    method: "POST",
-  });
+  url += "&export_format=csv";
+  console.log(`[SphereScout] downloadCsv URL: ${url}`);
+  return spherescoutFetch(url, { method: "POST" });
 }
 
 export async function getDownloadStatus(
