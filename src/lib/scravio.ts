@@ -253,4 +253,5 @@ export const PLATFORMS = [
   { id: "facebook", name: "Facebook", icon: "📘" },
   { id: "linkedin", name: "LinkedIn", icon: "💼" },
   { id: "tiktok", name: "TikTok", icon: "🎵" },
+  { id: "googlemaps", name: "Google Maps", icon: "📍" },
 ];

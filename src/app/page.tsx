@@ -6,6 +6,7 @@ import {
   FacebookLogo,
   LinkedInLogo,
   TikTokLogo,
+  GoogleMapsLogo,
 } from "@/components/PlatformLogos";
 
 const platforms = [
@@ -15,6 +16,7 @@ const platforms = [
   { name: "Facebook", Logo: FacebookLogo, hoverBorder: "hover:border-[#1877F2]/50", hoverGlow: "hover:shadow-[0_0_25px_-5px_rgba(24,119,242,0.3)]" },
   { name: "LinkedIn", Logo: LinkedInLogo, hoverBorder: "hover:border-[#0A66C2]/50", hoverGlow: "hover:shadow-[0_0_25px_-5px_rgba(10,102,194,0.3)]" },
   { name: "TikTok", Logo: TikTokLogo, hoverBorder: "hover:border-[#FE2C55]/40", hoverGlow: "hover:shadow-[0_0_25px_-5px_rgba(254,44,85,0.25)]" },
+  { name: "Google Maps", Logo: GoogleMapsLogo, hoverBorder: "hover:border-[#34A853]/50", hoverGlow: "hover:shadow-[0_0_25px_-5px_rgba(52,168,83,0.3)]" },
 ];
 
 export default function Home() {
@@ -50,7 +52,7 @@ export default function Home() {
             from social media
           </h1>
           <p className="text-lg text-white whitespace-nowrap">
-            Scrape emails, profiles, and contact data from Instagram, Twitter, YouTube, Facebook, LinkedIn, and TikTok. Pay per email, no subscriptions.
+            Scrape emails, profiles, and contact data from social media and Google Maps. Pay per lead, no subscriptions.
           </p>
           <div className="flex flex-col items-center gap-4">
             <Link
@@ -64,7 +66,7 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5 pt-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-5 pt-4 max-w-6xl mx-auto">
             {platforms.map((p) => (
               <div
                 key={p.name}

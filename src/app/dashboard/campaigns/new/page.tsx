@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useState, useEffect, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import {
   InstagramLogo,
@@ -9,6 +9,7 @@ import {
   FacebookLogo,
   LinkedInLogo,
   TikTokLogo,
+  GoogleMapsLogo,
 } from "@/components/PlatformLogos";
 
 const PLATFORMS: { id: string; name: string; Logo: ComponentType<{ className?: string }> }[] = [
@@ -18,6 +19,7 @@ const PLATFORMS: { id: string; name: string; Logo: ComponentType<{ className?: s
   { id: "facebook", name: "Facebook", Logo: FacebookLogo },
   { id: "linkedin", name: "LinkedIn", Logo: LinkedInLogo },
   { id: "tiktok", name: "TikTok", Logo: TikTokLogo },
+  { id: "googlemaps", name: "Google Maps", Logo: GoogleMapsLogo },
 ];
 
 const PLATFORM_METHODS: Record<
@@ -62,6 +64,21 @@ const LANGUAGES = [
   "", "en", "es", "fr", "de", "it", "pt", "nl", "ja", "ko", "zh", "ar", "hi", "tr", "pl", "sv", "da", "no", "fi",
 ];
 
+interface Category {
+  id: number;
+  name: string;
+  gcid: string;
+}
+
+interface PreviewItem {
+  name: string;
+  email: string[];
+  phone: string[];
+  city: string;
+  country: string;
+  level2_location: string;
+}
+
 export default function NewScrapePage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -80,16 +97,117 @@ export default function NewScrapePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Google Maps specific state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [gmCountry, setGmCountry] = useState("US");
+  const [gmState, setGmState] = useState("");
+  const [previewData, setPreviewData] = useState<{
+    preview: PreviewItem[];
+    totalCount: number;
+  } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // Fetch categories when Google Maps is selected
+  useEffect(() => {
+    if (platform === "googlemaps" && categories.length === 0) {
+      setCategoriesLoading(true);
+      fetch("/api/spherescout/categories")
+        .then((r) => r.json())
+        .then((data) => {
+          setCategories(data.categories || []);
+        })
+        .catch(() => {})
+        .finally(() => setCategoriesLoading(false));
+    }
+  }, [platform, categories.length]);
+
+  const filteredCategories = categories.filter((c) =>
+    c.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
   function selectPlatform(id: string) {
     setPlatform(id);
     setMethod(null);
-    setStep(2);
+    setPreviewData(null);
+    setSelectedCategory(null);
+    setCategorySearch("");
+    setGmCountry("US");
+    setGmState("");
+    setError("");
+    if (id === "googlemaps") {
+      // Skip method selection, go straight to configure
+      setStep(3);
+    } else {
+      setStep(2);
+    }
   }
 
   function selectMethod(m: (typeof PLATFORM_METHODS)["instagram"][0]) {
     setMethod(m);
     setScrapeName(`${platform} - ${m.label}`);
     setStep(3);
+  }
+
+  async function handlePreview() {
+    if (!selectedCategory) return;
+    setPreviewLoading(true);
+    setError("");
+    setPreviewData(null);
+    try {
+      const params = new URLSearchParams({
+        category: String(selectedCategory.id),
+        countries: gmCountry,
+      });
+      if (gmState) params.set("level2_locations", gmState);
+
+      const res = await fetch(`/api/spherescout/preview?${params}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Preview failed");
+        return;
+      }
+      setPreviewData({
+        preview: data.preview || [],
+        totalCount: data.totalCount || 0,
+      });
+    } catch {
+      setError("Failed to load preview");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  async function handleGoogleMapsExport() {
+    if (!selectedCategory || !previewData) return;
+    setExportLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/spherescout/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: selectedCategory.id,
+          categoryName: selectedCategory.name,
+          countries: gmCountry,
+          level2_locations: gmState || undefined,
+          totalCount: previewData.totalCount,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Export failed");
+        return;
+      }
+      router.push(`/dashboard/campaigns/${data.campaign.id}`);
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setExportLoading(false);
+    }
   }
 
   async function launchScrape() {
@@ -133,6 +251,12 @@ export default function NewScrapePage() {
     }
   }
 
+  const isGoogleMaps = platform === "googlemaps";
+  const stepLabels = isGoogleMaps
+    ? { 1: "Platform", 2: "Platform", 3: "Configure" }
+    : { 1: "Platform", 2: "Method", 3: "Configure" };
+  const totalSteps = isGoogleMaps ? [1, 3] : [1, 2, 3];
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
@@ -142,7 +266,7 @@ export default function NewScrapePage() {
 
       {/* Step indicator */}
       <div className="flex items-center gap-3">
-        {[1, 2, 3].map((s) => (
+        {totalSteps.map((s, i) => (
           <div key={s} className="flex items-center gap-2">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-semibold ${
@@ -151,12 +275,12 @@ export default function NewScrapePage() {
                   : "bg-card border border-card-border text-gray-400"
               }`}
             >
-              {s}
+              {i + 1}
             </div>
             <span className={`text-base ${step >= s ? "text-white" : "text-gray-400"}`}>
-              {s === 1 ? "Platform" : s === 2 ? "Method" : "Configure"}
+              {stepLabels[s as keyof typeof stepLabels]}
             </span>
-            {s < 3 && <div className="w-12 h-px bg-card-border" />}
+            {i < totalSteps.length - 1 && <div className="w-12 h-px bg-card-border" />}
           </div>
         ))}
       </div>
@@ -181,8 +305,8 @@ export default function NewScrapePage() {
         </div>
       )}
 
-      {/* Step 2: Extraction Method */}
-      {step === 2 && platform && (
+      {/* Step 2: Extraction Method (not shown for Google Maps) */}
+      {step === 2 && platform && !isGoogleMaps && (
         <div className="space-y-4">
           <button
             onClick={() => setStep(1)}
@@ -210,8 +334,171 @@ export default function NewScrapePage() {
         </div>
       )}
 
-      {/* Step 3: Configure */}
-      {step === 3 && method && (
+      {/* Step 3: Configure — Google Maps */}
+      {step === 3 && isGoogleMaps && (
+        <div className="space-y-6">
+          <button
+            onClick={() => { setStep(1); setPreviewData(null); }}
+            className="text-base text-gray-300 hover:text-white transition-colors"
+          >
+            &larr; Back to platforms
+          </button>
+
+          {error && (
+            <div className="p-4 text-base text-danger bg-danger/10 border border-danger/20 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-5 bg-card border border-card-border rounded-xl p-8">
+            {/* Business Category */}
+            <div>
+              <label className="block text-base font-medium text-white mb-2">
+                Business Category
+              </label>
+              {categoriesLoading ? (
+                <div className="text-gray-400 text-sm py-3">Loading categories...</div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={selectedCategory ? selectedCategory.name : categorySearch}
+                    onChange={(e) => {
+                      setCategorySearch(e.target.value);
+                      setSelectedCategory(null);
+                      setPreviewData(null);
+                    }}
+                    placeholder="Search categories (e.g. Restaurant, Plumber, Dentist)"
+                    className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  />
+                  {categorySearch && !selectedCategory && filteredCategories.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-card border border-card-border rounded-lg max-h-60 overflow-y-auto shadow-xl">
+                      {filteredCategories.slice(0, 20).map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setSelectedCategory(cat);
+                            setCategorySearch("");
+                            setPreviewData(null);
+                          }}
+                          className="w-full text-left px-5 py-3 text-base text-white hover:bg-accent/10 transition-colors border-b border-card-border last:border-0"
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Country */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-base font-medium text-white mb-2">Country</label>
+                <select
+                  value={gmCountry}
+                  onChange={(e) => { setGmCountry(e.target.value); setPreviewData(null); }}
+                  className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-accent/50"
+                >
+                  {COUNTRIES.filter(Boolean).map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-base font-medium text-white mb-2">
+                  State/Region <span className="text-gray-400 text-sm">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={gmState}
+                  onChange={(e) => { setGmState(e.target.value); setPreviewData(null); }}
+                  placeholder="e.g. CA, NY, NSW"
+                  className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+              </div>
+            </div>
+
+            {/* Preview Button */}
+            <button
+              onClick={handlePreview}
+              disabled={!selectedCategory || previewLoading}
+              className="w-full py-4 bg-card border border-accent/30 text-accent text-lg font-semibold rounded-lg hover:bg-accent/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {previewLoading ? "Loading Preview..." : "Preview Results"}
+            </button>
+
+            {/* Preview Results */}
+            {previewData && (
+              <div className="space-y-4">
+                <div className="p-4 bg-accent/5 border border-accent/20 rounded-lg">
+                  <p className="text-lg font-semibold text-white">
+                    {previewData.totalCount.toLocaleString()} leads available
+                  </p>
+                  <p className="text-sm text-gray-300 mt-1">
+                    Cost: {previewData.totalCount.toLocaleString()} credits (1 credit per lead)
+                  </p>
+                </div>
+
+                {previewData.preview.length > 0 && (
+                  <div className="bg-background border border-card-border rounded-lg overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-card-border text-left text-sm text-gray-400 uppercase tracking-wider">
+                          <th className="px-4 py-2">Business Name</th>
+                          <th className="px-4 py-2">City</th>
+                          <th className="px-4 py-2">Email</th>
+                          <th className="px-4 py-2">Phone</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewData.preview.slice(0, 10).map((item, i) => (
+                          <tr
+                            key={i}
+                            className="border-b border-card-border last:border-0"
+                          >
+                            <td className="px-4 py-2 text-sm text-white">{item.name}</td>
+                            <td className="px-4 py-2 text-sm text-gray-300">{item.city}</td>
+                            <td className="px-4 py-2 text-sm text-gray-300">
+                              {item.email?.length > 0 ? (
+                                <span className="text-success">Has email</span>
+                              ) : (
+                                <span className="text-gray-500">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-300">
+                              {item.phone?.length > 0 ? (
+                                <span className="text-success">Has phone</span>
+                              ) : (
+                                <span className="text-gray-500">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Export Button */}
+                <button
+                  onClick={handleGoogleMapsExport}
+                  disabled={exportLoading || previewData.totalCount === 0}
+                  className="w-full py-4 bg-gradient-to-r from-accent to-accent-cyan text-white text-lg font-semibold rounded-lg hover:from-accent/90 hover:to-accent-cyan/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exportLoading
+                    ? "Exporting..."
+                    : `Export ${previewData.totalCount.toLocaleString()} Leads (${previewData.totalCount.toLocaleString()} credits)`}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Configure — Social Media */}
+      {step === 3 && method && !isGoogleMaps && (
         <div className="space-y-6">
           <button
             onClick={() => setStep(2)}

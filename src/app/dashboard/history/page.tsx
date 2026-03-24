@@ -9,6 +9,7 @@ import {
   FacebookLogo,
   LinkedInLogo,
   TikTokLogo,
+  GoogleMapsLogo,
 } from "@/components/PlatformLogos";
 import type { ComponentType } from "react";
 
@@ -23,6 +24,8 @@ interface Scrape {
   config: string;
   createdAt: string;
   scravioCampaignId?: string;
+  spherescoutSearchId?: string;
+  source?: string;
 }
 
 const PLATFORM_LOGOS: Record<string, ComponentType<{ className?: string }>> = {
@@ -32,6 +35,7 @@ const PLATFORM_LOGOS: Record<string, ComponentType<{ className?: string }>> = {
   facebook: FacebookLogo,
   linkedin: LinkedInLogo,
   tiktok: TikTokLogo,
+  googlemaps: GoogleMapsLogo,
 };
 
 const METHOD_LABELS: Record<string, string> = {
@@ -50,12 +54,13 @@ const METHOD_LABELS: Record<string, string> = {
   FACEBOOK_KEYWORD_SEARCH: "Keyword Search",
   LINKEDIN_KEYWORD_SEARCH: "Keyword Search",
   TIKTOK_KEYWORD_SEARCH: "Keyword Search",
+  GOOGLEMAPS_BUSINESS_SEARCH: "Business Search",
 };
 
 function getSearchTarget(scrape: Scrape): string {
   try {
     const config = JSON.parse(scrape.config);
-    return config.keywords || config.hashtag || config.username || config.post_url || "-";
+    return config.categoryName || config.keywords || config.hashtag || config.username || config.post_url || "-";
   } catch {
     return "-";
   }
@@ -71,16 +76,36 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/scravio/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId: scrape.id }),
-      });
-      const data = await res.json();
-      if (data.downloadUrl) {
-        window.open(data.downloadUrl, "_blank");
+      if (scrape.source === "spherescout" && scrape.spherescoutSearchId) {
+        const statusRes = await fetch(
+          `/api/spherescout/status?searchId=${scrape.spherescoutSearchId}`
+        );
+        const statusData = await statusRes.json();
+        if ((statusData.status || "").toUpperCase() !== "COMPLETED") {
+          setError("Export still processing, try again shortly");
+          return;
+        }
+        const dlRes = await fetch(
+          `/api/spherescout/download?searchId=${scrape.spherescoutSearchId}`
+        );
+        const dlData = await dlRes.json();
+        if (dlData.downloadUrl) {
+          window.open(dlData.downloadUrl, "_blank");
+        } else {
+          setError(dlData.error || "Download not ready");
+        }
       } else {
-        setError(data.error || "Export failed");
+        const res = await fetch("/api/scravio/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campaignId: scrape.id }),
+        });
+        const data = await res.json();
+        if (data.downloadUrl) {
+          window.open(data.downloadUrl, "_blank");
+        } else {
+          setError(data.error || "Export failed");
+        }
       }
     } catch {
       setError("Network error");
@@ -220,7 +245,10 @@ export default function HistoryPage() {
   const [page, setPage] = useState(1);
 
   const fetchData = useCallback(async () => {
-    await fetch("/api/scravio/sync", { method: "POST" }).catch(() => {});
+    await Promise.all([
+      fetch("/api/scravio/sync", { method: "POST" }).catch(() => {}),
+      fetch("/api/spherescout/sync", { method: "POST" }).catch(() => {}),
+    ]);
     const data = await fetch("/api/scravio/campaigns").then((r) => r.json());
     setScrapes(data.campaigns || []);
     setQueuePositions(data.queuePositions || {});

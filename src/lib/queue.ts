@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import * as scravio from "@/lib/scravio";
+import * as spherescout from "@/lib/spherescout";
 import { sendScrapeCompletedEmail, sendScrapeFailedEmail } from "@/lib/email";
 
 const CONCURRENT_LIMIT = parseInt(process.env.SCRAVIO_CONCURRENT_LIMIT || "4", 10);
@@ -234,6 +235,81 @@ export async function syncAllActiveCampaigns() {
       if (updated?.status === "FAILED") failed++;
     } catch (error) {
       console.error(`Failed to sync campaign ${campaign.id}:`, error);
+    }
+  }
+
+  return { synced, completed, failed, total: active.length };
+}
+
+export async function syncSphereScoutCampaigns() {
+  const active = await prisma.campaign.findMany({
+    where: {
+      source: "spherescout",
+      status: { in: ["RUNNING", "PENDING"] },
+      spherescoutSearchId: { not: null },
+    },
+  });
+
+  let synced = 0;
+  let completed = 0;
+  let failed = 0;
+
+  for (const campaign of active) {
+    try {
+      const result = await spherescout.getDownloadStatus(campaign.spherescoutSearchId!);
+      const status = (result.status || "").toUpperCase();
+
+      if (status === "COMPLETED") {
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { status: "COMPLETED" },
+        });
+
+        const user = await prisma.user.findUnique({ where: { id: campaign.userId } });
+        if (user?.email) {
+          await sendScrapeCompletedEmail(user.email, {
+            campaignId: campaign.id,
+            name: campaign.name,
+            platform: campaign.platform,
+            extractionType: campaign.extractionType,
+            config: campaign.config,
+            leadsFound: campaign.leadsFound,
+          });
+        }
+        completed++;
+      } else if (status === "FAILED" || status === "ERROR") {
+        await prisma.$transaction([
+          prisma.campaign.update({
+            where: { id: campaign.id },
+            data: {
+              status: "FAILED",
+              creditsUsed: 0,
+              creditsRefunded: campaign.creditsUsed,
+            },
+          }),
+          prisma.user.update({
+            where: { id: campaign.userId },
+            data: { credits: { increment: campaign.creditsUsed } },
+          }),
+        ]);
+
+        const user = await prisma.user.findUnique({ where: { id: campaign.userId } });
+        if (user?.email) {
+          await sendScrapeFailedEmail(user.email, {
+            campaignId: campaign.id,
+            name: campaign.name,
+            platform: campaign.platform,
+            extractionType: campaign.extractionType,
+            config: campaign.config,
+            leadsFound: 0,
+          });
+        }
+        failed++;
+      }
+
+      synced++;
+    } catch (error) {
+      console.error(`[SphereScout Sync] Failed to sync campaign ${campaign.id}:`, error);
     }
   }
 

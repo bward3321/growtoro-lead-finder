@@ -15,6 +15,8 @@ interface Scrape {
   creditsRefunded: number;
   config: string;
   createdAt: string;
+  source?: string;
+  spherescoutSearchId?: string;
 }
 
 interface Lead {
@@ -48,7 +50,11 @@ export default function ScrapeDetailPage({
       const data = await res.json();
       setScrape(data.campaign);
 
-      if (data.campaign?.status === "COMPLETED" || data.campaign?.leadsFound > 0) {
+      // Only fetch leads for Scravio campaigns (SphereScout is CSV-only)
+      if (
+        data.campaign?.source !== "spherescout" &&
+        (data.campaign?.status === "COMPLETED" || data.campaign?.leadsFound > 0)
+      ) {
         const leadsRes = await fetch(`/api/scravio/campaigns/${id}/leads`);
         const leadsData = await leadsRes.json();
         setLeads(leadsData.leads || leadsData.data || []);
@@ -88,10 +94,29 @@ export default function ScrapeDetailPage({
   async function handleExport() {
     setExporting(true);
     try {
-      const res = await fetch(`/api/scravio/campaigns/${id}/export`, { method: "POST" });
-      const data = await res.json();
-      if (data.download_url || data.url) {
-        window.open(data.download_url || data.url, "_blank");
+      if (scrape?.source === "spherescout" && scrape.spherescoutSearchId) {
+        // SphereScout download flow
+        const statusRes = await fetch(
+          `/api/spherescout/status?searchId=${scrape.spherescoutSearchId}`
+        );
+        const statusData = await statusRes.json();
+        if ((statusData.status || "").toUpperCase() !== "COMPLETED") {
+          alert("Export still processing, try again shortly");
+          return;
+        }
+        const dlRes = await fetch(
+          `/api/spherescout/download?searchId=${scrape.spherescoutSearchId}`
+        );
+        const dlData = await dlRes.json();
+        if (dlData.downloadUrl) {
+          window.open(dlData.downloadUrl, "_blank");
+        }
+      } else {
+        const res = await fetch(`/api/scravio/campaigns/${id}/export`, { method: "POST" });
+        const data = await res.json();
+        if (data.download_url || data.url) {
+          window.open(data.download_url || data.url, "_blank");
+        }
       }
     } finally {
       setExporting(false);
@@ -263,8 +288,29 @@ export default function ScrapeDetailPage({
         </div>
       </div>
 
-      {/* Leads table */}
-      {leads.length > 0 && (
+      {/* SphereScout download section */}
+      {scrape.source === "spherescout" && scrape.status === "COMPLETED" && (
+        <div className="p-6 bg-card border border-card-border rounded-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Download Leads</h2>
+              <p className="text-sm text-gray-300 mt-1">
+                {scrape.leadsFound.toLocaleString()} leads available as CSV
+              </p>
+            </div>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="px-6 py-3 text-base bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
+            >
+              {exporting ? "Preparing..." : "Download CSV"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Leads table (Scravio only) */}
+      {leads.length > 0 && scrape.source !== "spherescout" && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-white">Leads ({leads.length})</h2>

@@ -64,6 +64,16 @@ export function LinkedInLogo({ className = "w-10 h-10" }: { className?: string }
   );
 }
 
+export function GoogleMapsLogo({ className = "w-10 h-10" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="48" height="48" rx="12" fill="#34A853" />
+      <path d="M24 12c-5 0-9 4-9 9 0 3.2 1.7 6 4.2 8.5L24 36l4.8-6.5C31.3 27 33 24.2 33 21c0-5-4-9-9-9zm0 12.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z" fill="white" />
+      <circle cx="24" cy="21" r="3.5" fill="#EA4335" />
+    </svg>
+  );
+}
+
 export function TikTokLogo({ className = "w-10 h-10" }: { className?: string }) {
   // Classic TikTok "d"-shaped music note with cyan + pink shadow offsets
   const notePath = "M25.5 11h3.6c.3 1.6 1.1 3 2.3 3.9 1 .8 2.3 1.2 3.6 1.3v3.6c-1.8-.1-3.5-.7-4.9-1.7v7.8c0 5.2-4.2 7.6-7.4 7.6-4.3 0-7.7-3.2-7.7-7.2 0-4.3 3.8-7.5 7.7-7.1v3.7c-.4-.1-.8-.2-1.2-.2-2.1 0-3.5 1.5-3.5 3.4 0 2 1.6 3.5 3.6 3.5 2.1 0 3.5-1.4 3.5-3.5V11z";
