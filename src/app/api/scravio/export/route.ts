@@ -15,12 +15,10 @@ export async function POST(request: NextRequest) {
   });
 
   if (!campaign?.scravioCampaignId) {
-    console.error("[Export] No scravioCampaignId for campaign:", campaignId);
-    return Response.json({ error: "Campaign not linked to Scravio — no Scravio ID saved" }, { status: 404 });
+    return Response.json({ error: "Campaign not linked to Scravio" }, { status: 404 });
   }
 
   const scravioId = campaign.scravioCampaignId;
-  console.log("[Export] Scravio campaign ID:", scravioId);
 
   // Step 1: Create the export
   let createResult;
@@ -29,17 +27,12 @@ export async function POST(request: NextRequest) {
     console.log("[Export] Create response:", JSON.stringify(createResult));
   } catch (error: any) {
     console.error("[Export] POST /list-exports failed:", error.message);
-    console.error("[Export] Scravio response:", JSON.stringify(error.scravioResponse));
     return Response.json({
-      error: `Scravio export creation failed: ${error.message}`,
-      scravioStatus: error.statusCode,
-      scravioResponse: error.scravioResponse,
+      error: `Export creation failed: ${error.message}`,
     }, { status: 502 });
   }
 
-  const exportId = createResult?.data?.exportId;
-  console.log("[Export] Extracted exportId:", exportId);
-
+  const exportId = createResult?.data?.exportId || createResult?.exportId;
   if (!exportId) {
     return Response.json({
       error: "Scravio did not return an export ID",
@@ -47,44 +40,51 @@ export async function POST(request: NextRequest) {
     }, { status: 502 });
   }
 
-  // Step 2: Get download URL (exports usually complete instantly)
-  let download;
-  try {
-    download = await scravio.getListExportDownload(exportId);
-    console.log("[Export] Download response:", JSON.stringify(download));
-  } catch (error: any) {
-    console.error("[Export] GET /list-exports/{id}/download failed:", error.message);
-    console.error("[Export] Scravio response:", JSON.stringify(error.scravioResponse));
-    return Response.json({
-      error: `Scravio download fetch failed: ${error.message}`,
-      scravioStatus: error.statusCode,
-      scravioResponse: error.scravioResponse,
-    }, { status: 502 });
-  }
+  console.log("[Export] exportId:", exportId);
 
-  const downloadUrl = download?.data?.downloadUrl;
-  if (downloadUrl) {
-    return Response.json({ downloadUrl });
-  }
-
-  // Poll a few times if not ready yet
-  for (let i = 0; i < 10; i++) {
+  // Step 2: Poll GET /list-exports?campaignId={id} until status is "completed"
+  const maxPolls = 15; // 15 * 2s = 30 seconds max
+  for (let i = 0; i < maxPolls; i++) {
     await new Promise((r) => setTimeout(r, 2000));
+
     try {
-      const retry = await scravio.getListExportDownload(exportId);
-      console.log(`[Export] Poll ${i + 1}:`, JSON.stringify(retry));
-      const url = retry?.data?.downloadUrl;
-      if (url) {
-        return Response.json({ downloadUrl: url });
+      const listResult = await scravio.getListExports(scravioId);
+      console.log(`[Export] Poll ${i + 1}:`, JSON.stringify(listResult));
+
+      // Find our export in the list
+      const exports = listResult?.data || listResult?.exports || listResult;
+      const exportList = Array.isArray(exports) ? exports : [];
+      const ourExport = exportList.find(
+        (e: any) => e.exportId === exportId || e.id === exportId || e._id === exportId
+      );
+
+      const status = (ourExport?.status || "").toLowerCase();
+      console.log(`[Export] Poll ${i + 1} status:`, status);
+
+      if (status === "completed") {
+        // Step 3: Get download URL
+        try {
+          const download = await scravio.getListExportDownload(exportId);
+          console.log("[Export] Download response:", JSON.stringify(download));
+          const downloadUrl = download?.data?.downloadUrl || download?.downloadUrl || download?.url;
+          if (downloadUrl) {
+            return Response.json({ downloadUrl });
+          }
+        } catch (dlError: any) {
+          console.error("[Export] Download fetch failed:", dlError.message);
+        }
+      }
+
+      if (status === "failed" || status === "error") {
+        return Response.json({ error: "Export failed on Scravio" }, { status: 502 });
       }
     } catch (error: any) {
-      console.error(`[Export] Poll ${i + 1} failed:`, error.message);
+      console.error(`[Export] Poll ${i + 1} error:`, error.message);
     }
   }
 
   return Response.json({
-    error: "Export created but download URL not available yet — try again in a moment",
+    error: "Export is taking longer than expected, please try again in a minute",
     exportId,
-    lastResponse: download,
   }, { status: 504 });
 }
