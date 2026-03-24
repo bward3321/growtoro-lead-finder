@@ -147,9 +147,23 @@ export default function NewScrapePage() {
     }
   }, [platform, categories.length]);
 
-  const filteredCategories = categories.filter((c) =>
-    c.name.toLowerCase().includes(categorySearch.toLowerCase())
-  );
+  const filteredCategories = categorySearch
+    ? categories
+        .filter((c) => c.name.toLowerCase().includes(categorySearch.toLowerCase()))
+        .sort((a, b) => {
+          const search = categorySearch.toLowerCase();
+          const aStarts = a.name.toLowerCase().startsWith(search);
+          const bStarts = b.name.toLowerCase().startsWith(search);
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+          // Within same group, check if any word starts with the search
+          const aWordStart = a.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(search));
+          const bWordStart = b.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(search));
+          if (aWordStart && !bWordStart) return -1;
+          if (!aWordStart && bWordStart) return 1;
+          return a.name.localeCompare(b.name);
+        })
+    : [];
 
   function selectPlatform(id: string) {
     setPlatform(id);
@@ -392,6 +406,12 @@ export default function NewScrapePage() {
                   <input
                     type="text"
                     value={selectedCategory ? selectedCategory.name : categorySearch}
+                    onFocus={() => {
+                      if (selectedCategory) {
+                        setCategorySearch("");
+                        setSelectedCategory(null);
+                      }
+                    }}
                     onChange={(e) => {
                       setCategorySearch(e.target.value);
                       setSelectedCategory(null);
