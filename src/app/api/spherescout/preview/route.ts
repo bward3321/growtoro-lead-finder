@@ -26,16 +26,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Log env var status for debugging
-  const envKey = process.env.SPHERESCOUT_API_KEY;
-  console.log("[SphereScout Preview] ENV KEY set:", !!envKey, "length:", envKey?.length);
-  console.log("[SphereScout Preview] Params:", {
-    category: categoryId,
-    categoryType: typeof categoryId,
-    countries,
-    level2_locations,
-  });
-
   try {
     const result = await spherescout.getCompanies({
       category: categoryId,
@@ -43,29 +33,15 @@ export async function GET(request: NextRequest) {
       level2_locations,
     });
 
-    console.log("[SphereScout Preview] Result keys:", Object.keys(result || {}));
-    console.log("[SphereScout Preview] totalCount:", result?.totalCount);
-    console.log("[SphereScout Preview] preview length:", result?.preview?.length);
-
-    // Return full result for debugging
-    return Response.json(result);
+    // Return totalCount and preview directly from SphereScout response
+    return Response.json({
+      totalCount: result.totalCount ?? 0,
+      preview: result.preview ?? [],
+    });
   } catch (error: any) {
-    console.error("[SphereScout Preview] Error:", error.message);
-    console.error("[SphereScout Preview] Status:", error.statusCode);
-    console.error("[SphereScout Preview] Full response:", JSON.stringify(error.spherescoutResponse));
+    console.error("[SphereScout Preview]", error.message);
     return Response.json(
-      {
-        error: `Failed to fetch preview: ${error.message}`,
-        statusCode: error.statusCode,
-        spherescoutResponse: error.spherescoutResponse,
-        debug: {
-          envKeySet: !!envKey,
-          envKeyLength: envKey?.length,
-          categoryId,
-          countries,
-          level2_locations,
-        },
-      },
+      { error: `Failed to fetch preview: ${error.message}` },
       { status: 502 }
     );
   }

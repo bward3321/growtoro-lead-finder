@@ -93,10 +93,12 @@ interface Category {
 interface PreviewItem {
   name: string;
   email: string[];
-  phone: string[];
+  phone: string[] | string;
   city: string;
   country: string;
   level2_location: string;
+  categories?: string[];
+  [key: string]: unknown;
 }
 
 export default function NewScrapePage() {
@@ -569,34 +571,42 @@ export default function NewScrapePage() {
                         <tr className="border-b border-card-border text-left text-sm text-gray-400 uppercase tracking-wider">
                           <th className="px-4 py-2">Business Name</th>
                           <th className="px-4 py-2">City</th>
+                          <th className="px-4 py-2">Categories</th>
                           <th className="px-4 py-2">Email</th>
                           <th className="px-4 py-2">Phone</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {previewData.preview.slice(0, 10).map((item, i) => (
-                          <tr
-                            key={i}
-                            className="border-b border-card-border last:border-0"
-                          >
-                            <td className="px-4 py-2 text-sm text-white">{item.name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-300">{item.city}</td>
-                            <td className="px-4 py-2 text-sm text-gray-300">
-                              {item.email?.length > 0 ? (
-                                <span className="text-success">Has email</span>
-                              ) : (
-                                <span className="text-gray-500">-</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-gray-300">
-                              {item.phone?.length > 0 ? (
-                                <span className="text-success">Has phone</span>
-                              ) : (
-                                <span className="text-gray-500">-</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {previewData.preview.slice(0, 10).map((item, i) => {
+                          const hasEmail = Array.isArray(item.email) ? item.email.length > 0 : !!item.email;
+                          const hasPhone = Array.isArray(item.phone) ? item.phone.length > 0 : !!item.phone;
+                          return (
+                            <tr
+                              key={i}
+                              className="border-b border-card-border last:border-0"
+                            >
+                              <td className="px-4 py-2 text-sm text-white">{item.name}</td>
+                              <td className="px-4 py-2 text-sm text-gray-300">{item.city}</td>
+                              <td className="px-4 py-2 text-sm text-gray-300 max-w-[200px] truncate">
+                                {item.categories?.join(", ") || "-"}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-300">
+                                {hasEmail ? (
+                                  <span className="text-success">Has email</span>
+                                ) : (
+                                  <span className="text-gray-500">-</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-300">
+                                {hasPhone ? (
+                                  <span className="text-success">Has phone</span>
+                                ) : (
+                                  <span className="text-gray-500">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

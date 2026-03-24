@@ -54,10 +54,22 @@ export interface SphereScoutCategory {
 export interface SphereScoutPreviewItem {
   name: string;
   email: string[];
-  phone: string[];
+  phone: string[] | string;
   city: string;
   country: string;
   level2_location: string;
+  address: string;
+  website: string;
+  instagram: string;
+  facebook: string;
+  categories: string[];
+  rating: number;
+  review_count: number;
+  latitude: number;
+  longitude: number;
+  zipcode: string;
+  collected_at: string;
+  place_id: string;
 }
 
 export interface SphereScoutPreviewResult {
@@ -77,23 +89,16 @@ export async function getCompanies(params: {
   countries: string;
   level2_locations?: string;
 }): Promise<SphereScoutPreviewResult> {
-  // Build query string manually — SphereScout expects array-style params
-  const parts: string[] = [];
-  parts.push(`category=${encodeURIComponent(String(params.category))}`);
-  // countries can be comma-separated or single
-  const countryCodes = params.countries.split(",").map((c) => c.trim()).filter(Boolean);
-  for (const c of countryCodes) {
-    parts.push(`countries=${encodeURIComponent(c)}`);
-  }
+  // Simple query string format — proven to work via test route
+  const query = new URLSearchParams();
+  query.set("category", String(params.category));
+  query.set("countries", params.countries);
   if (params.level2_locations) {
-    const locations = params.level2_locations.split(",").map((l) => l.trim()).filter(Boolean);
-    for (const l of locations) {
-      parts.push(`level2_locations=${encodeURIComponent(l)}`);
-    }
+    query.set("level2_locations", params.level2_locations);
   }
-  const queryString = parts.join("&");
-  console.log(`[SphereScout] getCompanies query: ${queryString}`);
-  return spherescoutFetch(`/api/companies/?${queryString}`);
+  const qs = query.toString();
+  console.log(`[SphereScout] getCompanies query: ${qs}`);
+  return spherescoutFetch(`/api/companies/?${qs}`);
 }
 
 export async function downloadCsv(params: {
@@ -101,20 +106,14 @@ export async function downloadCsv(params: {
   countries: string;
   level2_locations?: string;
 }): Promise<{ status: string; search_id: string; lead_count: number }> {
-  const parts: string[] = [];
-  parts.push(`category=${encodeURIComponent(String(params.category))}`);
-  const countryCodes = params.countries.split(",").map((c) => c.trim()).filter(Boolean);
-  for (const c of countryCodes) {
-    parts.push(`countries=${encodeURIComponent(c)}`);
-  }
+  const query = new URLSearchParams();
+  query.set("category", String(params.category));
+  query.set("countries", params.countries);
   if (params.level2_locations) {
-    const locations = params.level2_locations.split(",").map((l) => l.trim()).filter(Boolean);
-    for (const l of locations) {
-      parts.push(`level2_locations=${encodeURIComponent(l)}`);
-    }
+    query.set("level2_locations", params.level2_locations);
   }
-  parts.push("export_format=csv");
-  return spherescoutFetch(`/api/download-csv/?${parts.join("&")}`, {
+  query.set("export_format", "csv");
+  return spherescoutFetch(`/api/download-csv/?${query.toString()}`, {
     method: "POST",
   });
 }
