@@ -198,6 +198,18 @@ function StatusBadge({ status, queuePosition }: { status: string; queuePosition?
     );
   }
 
+  if (status === "PROCESSING") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full text-purple-400 bg-purple-400/10">
+        <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        Processing
+      </span>
+    );
+  }
+
   if (status === "COMPLETED") {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full text-success bg-success/10">
@@ -260,7 +272,7 @@ export default function HistoryPage() {
 
     const interval = setInterval(() => {
       const hasActive = scrapes.some((s) =>
-        ["RUNNING", "PENDING", "QUEUED"].includes(s.status)
+        ["RUNNING", "PENDING", "QUEUED", "PROCESSING"].includes(s.status)
       );
       if (hasActive) fetchData();
     }, 15000);
@@ -362,6 +374,8 @@ export default function HistoryPage() {
                       <td className="px-5 py-4">
                         {scrape.status === "QUEUED" ? (
                           <span className="text-sm text-orange-400/70">Waiting...</span>
+                        ) : scrape.status === "PROCESSING" ? (
+                          <span className="text-sm text-purple-400/70">Preparing export...</span>
                         ) : scrape.status === "RUNNING" ? (
                           <div className="w-28">
                             <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
@@ -377,7 +391,7 @@ export default function HistoryPage() {
                           </div>
                         ) : scrape.status === "FAILED" ? (
                           <DeleteButton scrapeId={scrape.id} onDelete={fetchData} />
-                        ) : scrape.status === "COMPLETED" && scrape.leadsFound > 0 ? (
+                        ) : scrape.status === "COMPLETED" ? (
                           <DownloadButton scrape={scrape} />
                         ) : null}
                       </td>

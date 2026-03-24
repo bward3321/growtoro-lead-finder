@@ -157,6 +157,7 @@ export default function ScrapeDetailPage({
 
   const statusColor: Record<string, string> = {
     RUNNING: "text-accent-cyan bg-accent-cyan/10",
+    PROCESSING: "text-purple-400 bg-purple-400/10",
     COMPLETED: "text-success bg-success/10",
     STOPPED: "text-gray-400 bg-gray-400/10",
     PENDING: "text-yellow-400 bg-yellow-400/10",
@@ -180,8 +181,10 @@ export default function ScrapeDetailPage({
     );
   }
 
-  const progress =
-    scrape.targetCount > 0
+  const isSphereScout = scrape.source === "spherescout";
+  const progress = isSphereScout
+    ? (scrape.status === "COMPLETED" ? 100 : scrape.status === "PROCESSING" ? 50 : 0)
+    : scrape.targetCount > 0
       ? Math.min(100, Math.round((scrape.leadsFound / scrape.targetCount) * 100))
       : 0;
 
@@ -238,8 +241,12 @@ export default function ScrapeDetailPage({
           </span>
         </div>
         <div className="p-5 bg-card border border-card-border rounded-xl">
-          <p className="text-sm text-gray-300">Emails Found</p>
-          <p className="text-4xl font-bold text-white mt-1">{scrape.leadsFound.toLocaleString()}</p>
+          <p className="text-sm text-gray-300">{isSphereScout ? "Leads Found" : "Emails Found"}</p>
+          {scrape.status === "PROCESSING" ? (
+            <p className="text-lg font-medium text-purple-400 mt-2">Processing...</p>
+          ) : (
+            <p className="text-4xl font-bold text-white mt-1">{scrape.leadsFound.toLocaleString()}</p>
+          )}
         </div>
         <div className="p-5 bg-card border border-card-border rounded-xl">
           <p className="text-sm text-gray-300">Target</p>

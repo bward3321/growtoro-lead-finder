@@ -9,7 +9,7 @@ export async function POST() {
   const active = await prisma.campaign.findMany({
     where: {
       source: "spherescout",
-      status: { in: ["RUNNING", "PENDING"] },
+      status: { in: ["RUNNING", "PENDING", "PROCESSING"] },
       spherescoutSearchId: { not: null },
     },
   });
@@ -26,7 +26,10 @@ export async function POST() {
       if (status === "COMPLETED") {
         await prisma.campaign.update({
           where: { id: campaign.id },
-          data: { status: "COMPLETED" },
+          data: {
+            status: "COMPLETED",
+            leadsFound: campaign.targetCount,
+          },
         });
         completed++;
       } else if (status === "FAILED" || status === "ERROR") {

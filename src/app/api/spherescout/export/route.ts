@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       targetCount: totalCount,
       creditsUsed: totalCount,
       config: JSON.stringify({ category, categoryName, countries, level2_locations }),
-      status: "RUNNING",
+      status: "PROCESSING",
     },
   });
 
@@ -56,7 +56,6 @@ export async function POST(request: NextRequest) {
       where: { id: campaign.id },
       data: {
         spherescoutSearchId: searchId,
-        leadsFound: result.lead_count || totalCount,
       },
     });
 

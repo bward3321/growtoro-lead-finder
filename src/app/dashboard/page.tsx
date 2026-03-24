@@ -205,6 +205,18 @@ function StatusBadge({ status, queuePosition }: { status: string; queuePosition?
     );
   }
 
+  if (status === "PROCESSING") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full text-purple-400 bg-purple-400/10">
+        <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        Processing
+      </span>
+    );
+  }
+
   if (status === "COMPLETED") {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full text-success bg-success/10">
@@ -291,7 +303,7 @@ export default function DashboardPage() {
     // Poll every 15 seconds if there are active scrapes
     const interval = setInterval(() => {
       const hasActive = scrapes.some((s) =>
-        ["RUNNING", "PENDING", "QUEUED"].includes(s.status)
+        ["RUNNING", "PENDING", "QUEUED", "PROCESSING"].includes(s.status)
       );
       if (hasActive || scrapes.length === 0) {
         fetchData();
@@ -363,7 +375,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="p-6 bg-card border border-card-border rounded-xl">
-          <p className="text-base text-gray-300">Emails Found</p>
+          <p className="text-base text-gray-300">Leads Found</p>
           <p className="text-4xl font-bold text-white mt-1">
             {scrapes.reduce((sum, c) => sum + c.leadsFound, 0).toLocaleString()}
           </p>
@@ -396,7 +408,7 @@ export default function DashboardPage() {
                   <th className="px-5 py-3">Method</th>
                   <th className="px-5 py-3">Target</th>
                   <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Emails</th>
+                  <th className="px-5 py-3">Leads</th>
                   <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3">Actions</th>
                 </tr>
@@ -438,7 +450,11 @@ export default function DashboardPage() {
                         />
                       </td>
                       <td className="px-5 py-4 text-base text-white">
-                        {scrape.leadsFound.toLocaleString()}
+                        {scrape.status === "PROCESSING" ? (
+                          <span className="text-purple-400 text-sm">Processing...</span>
+                        ) : (
+                          scrape.leadsFound.toLocaleString()
+                        )}
                       </td>
                       <td className="px-5 py-4 text-base text-gray-300">
                         {new Date(scrape.createdAt).toLocaleDateString()}
@@ -446,6 +462,8 @@ export default function DashboardPage() {
                       <td className="px-5 py-4">
                         {scrape.status === "QUEUED" ? (
                           <span className="text-sm text-orange-400/70">Waiting...</span>
+                        ) : scrape.status === "PROCESSING" ? (
+                          <span className="text-sm text-purple-400/70">Preparing export...</span>
                         ) : scrape.status === "RUNNING" ? (
                           <div className="w-28">
                             <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
@@ -461,7 +479,7 @@ export default function DashboardPage() {
                           </div>
                         ) : scrape.status === "FAILED" ? (
                           <DeleteButton scrapeId={scrape.id} onDelete={fetchData} />
-                        ) : scrape.status === "COMPLETED" && scrape.leadsFound > 0 ? (
+                        ) : scrape.status === "COMPLETED" ? (
                           <DownloadButton scrape={scrape} />
                         ) : null}
                       </td>

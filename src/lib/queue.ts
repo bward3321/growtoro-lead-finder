@@ -245,7 +245,7 @@ export async function syncSphereScoutCampaigns() {
   const active = await prisma.campaign.findMany({
     where: {
       source: "spherescout",
-      status: { in: ["RUNNING", "PENDING"] },
+      status: { in: ["RUNNING", "PENDING", "PROCESSING"] },
       spherescoutSearchId: { not: null },
     },
   });
@@ -262,7 +262,10 @@ export async function syncSphereScoutCampaigns() {
       if (status === "COMPLETED") {
         await prisma.campaign.update({
           where: { id: campaign.id },
-          data: { status: "COMPLETED" },
+          data: {
+            status: "COMPLETED",
+            leadsFound: campaign.targetCount,
+          },
         });
 
         const user = await prisma.user.findUnique({ where: { id: campaign.userId } });
@@ -273,7 +276,7 @@ export async function syncSphereScoutCampaigns() {
             platform: campaign.platform,
             extractionType: campaign.extractionType,
             config: campaign.config,
-            leadsFound: campaign.leadsFound,
+            leadsFound: campaign.targetCount,
           });
         }
         completed++;
