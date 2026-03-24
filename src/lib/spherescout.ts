@@ -6,7 +6,10 @@ async function spherescoutFetch(path: string, options: RequestInit = {}): Promis
   const url = `${SPHERESCOUT_BASE_URL}${path}`;
   const method = options.method || "GET";
 
-  console.log(`[SphereScout] ${method} ${url}`, options.body || "");
+  const authHeader = `Token ${API_KEY}`;
+  console.log(`[SphereScout] ${method} ${url}`);
+  console.log(`[SphereScout] Auth: "${authHeader.slice(0, 14)}...${authHeader.slice(-8)}" (key length: ${API_KEY?.length})`);
+  if (options.body) console.log(`[SphereScout] Body:`, options.body);
 
   const res = await fetch(url, {
     ...options,
