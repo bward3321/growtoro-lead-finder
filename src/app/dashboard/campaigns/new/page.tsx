@@ -209,14 +209,18 @@ export default function NewScrapePage() {
 
       const res = await fetch(`/api/spherescout/preview?${params}`);
       const data = await res.json();
+      console.log("[GoogleMaps Preview] Full API response:", JSON.stringify(data));
+      console.log("[GoogleMaps Preview] totalCount:", data.totalCount, "type:", typeof data.totalCount);
+      console.log("[GoogleMaps Preview] preview length:", data.preview?.length);
       if (!res.ok) {
         setError(data.error || "Preview failed");
         return;
       }
-      setPreviewData({
-        preview: data.preview || [],
-        totalCount: data.totalCount || 0,
-      });
+      // Read totalCount — handle both camelCase and snake_case
+      const totalCount = data.totalCount ?? data.total_count ?? data.count ?? (data.preview?.length || 0);
+      const preview = data.preview || data.results || [];
+      console.log("[GoogleMaps Preview] Setting state:", { totalCount, previewLength: preview.length });
+      setPreviewData({ preview, totalCount });
     } catch {
       setError("Failed to load preview");
     } finally {
@@ -571,9 +575,10 @@ export default function NewScrapePage() {
                         <tr className="border-b border-card-border text-left text-sm text-gray-400 uppercase tracking-wider">
                           <th className="px-4 py-2">Business Name</th>
                           <th className="px-4 py-2">City</th>
-                          <th className="px-4 py-2">Categories</th>
+                          <th className="px-4 py-2">State</th>
                           <th className="px-4 py-2">Email</th>
                           <th className="px-4 py-2">Phone</th>
+                          <th className="px-4 py-2">Categories</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -585,11 +590,9 @@ export default function NewScrapePage() {
                               key={i}
                               className="border-b border-card-border last:border-0"
                             >
-                              <td className="px-4 py-2 text-sm text-white">{item.name}</td>
-                              <td className="px-4 py-2 text-sm text-gray-300">{item.city}</td>
-                              <td className="px-4 py-2 text-sm text-gray-300 max-w-[200px] truncate">
-                                {item.categories?.join(", ") || "-"}
-                              </td>
+                              <td className="px-4 py-2 text-sm text-white">{item.name || "-"}</td>
+                              <td className="px-4 py-2 text-sm text-gray-300">{item.city || "-"}</td>
+                              <td className="px-4 py-2 text-sm text-gray-300">{item.level2_location || "-"}</td>
                               <td className="px-4 py-2 text-sm text-gray-300">
                                 {hasEmail ? (
                                   <span className="text-success">Has email</span>
@@ -603,6 +606,9 @@ export default function NewScrapePage() {
                                 ) : (
                                   <span className="text-gray-500">-</span>
                                 )}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-300 max-w-[200px] truncate">
+                                {item.categories?.join(", ") || "-"}
                               </td>
                             </tr>
                           );
