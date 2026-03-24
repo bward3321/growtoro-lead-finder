@@ -1,44 +1,7 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 
-const SPHERESCOUT_BASE_URL = "https://api.spherescout.io";
-
-async function callSphereScout(url: string) {
-  const API_KEY = process.env.SPHERESCOUT_API_KEY!;
-  console.log(`[SphereScout Preview] GET ${url}`);
-
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      Authorization: `Token ${API_KEY}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "GrowtorLeadFinder/1.0",
-    },
-  });
-
-  const text = await res.text();
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    body = text;
-  }
-
-  console.log(`[SphereScout Preview] → ${res.status}`, typeof body === "object" ? JSON.stringify(body).slice(0, 500) : body);
-  return { status: res.status, ok: res.ok, body };
-}
-
-function buildCompaniesUrl(categoryId: number, countries: string, level2_locations: string): string {
-  let url = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${encodeURIComponent(countries)}`;
-  if (level2_locations) {
-    const states = level2_locations.split(",").map((s) => s.trim()).filter(Boolean);
-    for (const state of states) {
-      url += `&level2_locations=${encodeURIComponent(state)}`;
-    }
-  }
-  return url;
-}
+const BASE = "https://api.spherescout.io";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -58,23 +21,48 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "category must be a valid integer ID" }, { status: 400 });
   }
 
-  const url = buildCompaniesUrl(categoryId, countries, level2_locations);
-  console.log(`[SphereScout Preview] Final URL: ${url}`);
+  // Build URL: always category + countries, optionally level2_locations
+  let url = `${BASE}/api/companies/?category=${categoryId}&countries=${countries}`;
 
-  const result = await callSphereScout(url);
-
-  if (!result.ok) {
-    return Response.json(
-      { error: `SphereScout API error ${result.status}`, debug: { url, body: result.body } },
-      { status: 502 }
-    );
+  if (level2_locations) {
+    const states = level2_locations.split(",").map((s) => s.trim()).filter(Boolean);
+    if (states.length > 0) {
+      for (const state of states) {
+        url += `&level2_locations=${state}`;
+      }
+    }
   }
 
-  const responseBody = result.body as Record<string, unknown>;
+  console.log(`[Preview] URL: ${url}`);
+
+  const API_KEY = process.env.SPHERESCOUT_API_KEY!;
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      Authorization: `Token ${API_KEY}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "User-Agent": "GrowtorLeadFinder/1.0",
+    },
+  });
+
+  const text = await res.text();
+  let body: any;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = text;
+  }
+
+  console.log(`[Preview] Status: ${res.status}, totalCount: ${body?.totalCount}`);
+
+  if (!res.ok) {
+    return Response.json({ error: `API error ${res.status}`, debug: { url, body } }, { status: 502 });
+  }
 
   return Response.json({
-    totalCount: responseBody.totalCount ?? responseBody.total_count ?? 0,
-    preview: responseBody.preview ?? responseBody.results ?? [],
-    debug: { urlCalled: url, responseKeys: responseBody ? Object.keys(responseBody) : [] },
+    totalCount: body.totalCount ?? body.total_count ?? 0,
+    preview: body.preview ?? [],
+    debug: { url },
   });
 }
