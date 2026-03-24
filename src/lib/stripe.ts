@@ -10,3 +10,10 @@ export const CREDIT_PACKS = [
   { id: "pro", name: "Pro", price: 14900, credits: 5000, label: "$149" },
   { id: "scale", name: "Scale", price: 29900, credits: 15000, label: "$299" },
 ] as const;
+
+export const GOOGLE_MAPS_PACKS = [
+  { id: "gm-starter", name: "Starter", price: 2900, credits: 2000, label: "$29" },
+  { id: "gm-growth", name: "Growth", price: 5900, credits: 5000, label: "$59" },
+  { id: "gm-pro", name: "Pro", price: 9900, credits: 10000, label: "$99" },
+  { id: "gm-scale", name: "Scale", price: 19900, credits: 25000, label: "$199" },
+] as const;

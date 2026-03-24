@@ -6,7 +6,7 @@ async function spherescoutFetch(path: string, options: RequestInit = {}): Promis
   const url = `${SPHERESCOUT_BASE_URL}${path}`;
   const method = options.method || "GET";
 
-  console.log(`[SphereScout] ${method} ${url}`);
+  console.log(`[SphereScout] ${method} ${url}`, options.body || "");
 
   const res = await fetch(url, {
     ...options,
@@ -28,7 +28,7 @@ async function spherescoutFetch(path: string, options: RequestInit = {}): Promis
     data = text;
   }
 
-  console.log(`[SphereScout] ${method} ${url} → ${res.status}`);
+  console.log(`[SphereScout] ${method} ${url} → ${res.status}`, JSON.stringify(data));
 
   if (!res.ok) {
     const parsed = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
@@ -74,13 +74,23 @@ export async function getCompanies(params: {
   countries: string;
   level2_locations?: string;
 }): Promise<SphereScoutPreviewResult> {
-  const query = new URLSearchParams();
-  query.set("category", String(params.category));
-  query.set("countries", params.countries);
-  if (params.level2_locations) {
-    query.set("level2_locations", params.level2_locations);
+  // Build query string manually — SphereScout expects array-style params
+  const parts: string[] = [];
+  parts.push(`category=${encodeURIComponent(String(params.category))}`);
+  // countries can be comma-separated or single
+  const countryCodes = params.countries.split(",").map((c) => c.trim()).filter(Boolean);
+  for (const c of countryCodes) {
+    parts.push(`countries=${encodeURIComponent(c)}`);
   }
-  return spherescoutFetch(`/api/companies/?${query.toString()}`);
+  if (params.level2_locations) {
+    const locations = params.level2_locations.split(",").map((l) => l.trim()).filter(Boolean);
+    for (const l of locations) {
+      parts.push(`level2_locations=${encodeURIComponent(l)}`);
+    }
+  }
+  const queryString = parts.join("&");
+  console.log(`[SphereScout] getCompanies query: ${queryString}`);
+  return spherescoutFetch(`/api/companies/?${queryString}`);
 }
 
 export async function downloadCsv(params: {
@@ -88,14 +98,20 @@ export async function downloadCsv(params: {
   countries: string;
   level2_locations?: string;
 }): Promise<{ status: string; search_id: string; lead_count: number }> {
-  const query = new URLSearchParams();
-  query.set("category", String(params.category));
-  query.set("countries", params.countries);
-  if (params.level2_locations) {
-    query.set("level2_locations", params.level2_locations);
+  const parts: string[] = [];
+  parts.push(`category=${encodeURIComponent(String(params.category))}`);
+  const countryCodes = params.countries.split(",").map((c) => c.trim()).filter(Boolean);
+  for (const c of countryCodes) {
+    parts.push(`countries=${encodeURIComponent(c)}`);
   }
-  query.set("export_format", "csv");
-  return spherescoutFetch(`/api/download-csv/?${query.toString()}`, {
+  if (params.level2_locations) {
+    const locations = params.level2_locations.split(",").map((l) => l.trim()).filter(Boolean);
+    for (const l of locations) {
+      parts.push(`level2_locations=${encodeURIComponent(l)}`);
+    }
+  }
+  parts.push("export_format=csv");
+  return spherescoutFetch(`/api/download-csv/?${parts.join("&")}`, {
     method: "POST",
   });
 }

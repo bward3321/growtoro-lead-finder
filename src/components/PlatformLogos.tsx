@@ -66,11 +66,11 @@ export function LinkedInLogo({ className = "w-10 h-10" }: { className?: string }
 
 export function GoogleMapsLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="12" fill="#34A853" />
-      <path d="M24 12c-5 0-9 4-9 9 0 3.2 1.7 6 4.2 8.5L24 36l4.8-6.5C31.3 27 33 24.2 33 21c0-5-4-9-9-9zm0 12.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z" fill="white" />
-      <circle cx="24" cy="21" r="3.5" fill="#EA4335" />
-    </svg>
+    <img
+      src="/google-maps-icon.png"
+      alt="Google Maps"
+      className={`${className} rounded-xl object-cover`}
+    />
   );
 }
 

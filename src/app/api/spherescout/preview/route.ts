@@ -18,17 +18,38 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const categoryId = parseInt(category, 10);
+  if (isNaN(categoryId)) {
+    return Response.json(
+      { error: "category must be a valid integer ID" },
+      { status: 400 }
+    );
+  }
+
+  console.log("[SphereScout Preview] Params:", {
+    category: categoryId,
+    countries,
+    level2_locations,
+  });
+
   try {
     const result = await spherescout.getCompanies({
-      category: parseInt(category, 10),
+      category: categoryId,
       countries,
       level2_locations,
     });
+
+    console.log("[SphereScout Preview] Result:", {
+      totalCount: result.totalCount,
+      previewCount: result.preview?.length,
+    });
+
     return Response.json(result);
   } catch (error: any) {
-    console.error("[SphereScout Preview]", error.message);
+    console.error("[SphereScout Preview] Error:", error.message);
+    console.error("[SphereScout Preview] Response:", JSON.stringify(error.spherescoutResponse));
     return Response.json(
-      { error: "Failed to fetch preview" },
+      { error: `Failed to fetch preview: ${error.message}` },
       { status: 502 }
     );
   }

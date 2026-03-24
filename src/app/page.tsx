@@ -66,11 +66,11 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-5 pt-4 max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 pt-4 max-w-5xl mx-auto">
             {platforms.map((p) => (
               <div
                 key={p.name}
-                className={`platform-card flex flex-col items-center justify-center gap-5 p-8 rounded-2xl border border-card-border bg-card transition-all duration-300 ${p.hoverBorder} ${p.hoverGlow}`}
+                className={`platform-card flex flex-col items-center justify-center gap-5 px-10 py-8 min-w-[160px] rounded-2xl border border-card-border bg-card transition-all duration-300 ${p.hoverBorder} ${p.hoverGlow}`}
               >
                 <p.Logo className="w-20 h-20" />
                 <span className="text-lg font-semibold text-white/80">{p.name}</span>

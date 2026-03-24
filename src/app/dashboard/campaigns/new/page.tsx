@@ -64,6 +64,26 @@ const LANGUAGES = [
   "", "en", "es", "fr", "de", "it", "pt", "nl", "ja", "ko", "zh", "ar", "hi", "tr", "pl", "sv", "da", "no", "fi",
 ];
 
+const US_STATES = [
+  { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" }, { code: "AZ", name: "Arizona" },
+  { code: "AR", name: "Arkansas" }, { code: "CA", name: "California" }, { code: "CO", name: "Colorado" },
+  { code: "CT", name: "Connecticut" }, { code: "DE", name: "Delaware" }, { code: "FL", name: "Florida" },
+  { code: "GA", name: "Georgia" }, { code: "HI", name: "Hawaii" }, { code: "ID", name: "Idaho" },
+  { code: "IL", name: "Illinois" }, { code: "IN", name: "Indiana" }, { code: "IA", name: "Iowa" },
+  { code: "KS", name: "Kansas" }, { code: "KY", name: "Kentucky" }, { code: "LA", name: "Louisiana" },
+  { code: "ME", name: "Maine" }, { code: "MD", name: "Maryland" }, { code: "MA", name: "Massachusetts" },
+  { code: "MI", name: "Michigan" }, { code: "MN", name: "Minnesota" }, { code: "MS", name: "Mississippi" },
+  { code: "MO", name: "Missouri" }, { code: "MT", name: "Montana" }, { code: "NE", name: "Nebraska" },
+  { code: "NV", name: "Nevada" }, { code: "NH", name: "New Hampshire" }, { code: "NJ", name: "New Jersey" },
+  { code: "NM", name: "New Mexico" }, { code: "NY", name: "New York" }, { code: "NC", name: "North Carolina" },
+  { code: "ND", name: "North Dakota" }, { code: "OH", name: "Ohio" }, { code: "OK", name: "Oklahoma" },
+  { code: "OR", name: "Oregon" }, { code: "PA", name: "Pennsylvania" }, { code: "RI", name: "Rhode Island" },
+  { code: "SC", name: "South Carolina" }, { code: "SD", name: "South Dakota" }, { code: "TN", name: "Tennessee" },
+  { code: "TX", name: "Texas" }, { code: "UT", name: "Utah" }, { code: "VT", name: "Vermont" },
+  { code: "VA", name: "Virginia" }, { code: "WA", name: "Washington" }, { code: "WV", name: "West Virginia" },
+  { code: "WI", name: "Wisconsin" }, { code: "WY", name: "Wyoming" },
+];
+
 interface Category {
   id: number;
   name: string;
@@ -102,7 +122,9 @@ export default function NewScrapePage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [gmCountry, setGmCountry] = useState("US");
-  const [gmState, setGmState] = useState("");
+  const [gmSelectedStates, setGmSelectedStates] = useState<{ code: string; name: string }[]>([]);
+  const [gmStateSearch, setGmStateSearch] = useState("");
+  const [gmStateFreeText, setGmStateFreeText] = useState("");
   const [previewData, setPreviewData] = useState<{
     preview: PreviewItem[];
     totalCount: number;
@@ -136,7 +158,9 @@ export default function NewScrapePage() {
     setSelectedCategory(null);
     setCategorySearch("");
     setGmCountry("US");
-    setGmState("");
+    setGmSelectedStates([]);
+    setGmStateSearch("");
+    setGmStateFreeText("");
     setError("");
     if (id === "googlemaps") {
       // Skip method selection, go straight to configure
@@ -162,7 +186,10 @@ export default function NewScrapePage() {
         category: String(selectedCategory.id),
         countries: gmCountry,
       });
-      if (gmState) params.set("level2_locations", gmState);
+      const stateValue = gmCountry === "US"
+        ? gmSelectedStates.map((s) => s.code).join(",")
+        : gmStateFreeText;
+      if (stateValue) params.set("level2_locations", stateValue);
 
       const res = await fetch(`/api/spherescout/preview?${params}`);
       const data = await res.json();
@@ -193,7 +220,9 @@ export default function NewScrapePage() {
           category: selectedCategory.id,
           categoryName: selectedCategory.name,
           countries: gmCountry,
-          level2_locations: gmState || undefined,
+          level2_locations: (gmCountry === "US"
+            ? gmSelectedStates.map((s) => s.code).join(",")
+            : gmStateFreeText) || undefined,
           totalCount: previewData.totalCount,
         }),
       });
@@ -287,12 +316,12 @@ export default function NewScrapePage() {
 
       {/* Step 1: Platform */}
       {step === 1 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
           {PLATFORMS.map((p) => (
             <button
               key={p.id}
               onClick={() => selectPlatform(p.id)}
-              className={`flex flex-col items-center gap-4 p-8 rounded-2xl border text-center transition-all hover:border-accent/50 hover:bg-accent/5 ${
+              className={`flex flex-col items-center gap-4 px-10 py-8 min-w-[160px] rounded-2xl border text-center transition-all hover:border-accent/50 hover:bg-accent/5 ${
                 platform === p.id
                   ? "border-accent bg-accent/10"
                   : "border-card-border bg-card"
@@ -398,7 +427,7 @@ export default function NewScrapePage() {
                 <label className="block text-base font-medium text-white mb-2">Country</label>
                 <select
                   value={gmCountry}
-                  onChange={(e) => { setGmCountry(e.target.value); setPreviewData(null); }}
+                  onChange={(e) => { setGmCountry(e.target.value); setGmSelectedStates([]); setGmStateSearch(""); setGmStateFreeText(""); setPreviewData(null); }}
                   className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-accent/50"
                 >
                   {COUNTRIES.filter(Boolean).map((c) => (
@@ -410,13 +439,85 @@ export default function NewScrapePage() {
                 <label className="block text-base font-medium text-white mb-2">
                   State/Region <span className="text-gray-400 text-sm">(optional)</span>
                 </label>
-                <input
-                  type="text"
-                  value={gmState}
-                  onChange={(e) => { setGmState(e.target.value); setPreviewData(null); }}
-                  placeholder="e.g. CA, NY, NSW"
-                  className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
-                />
+                {gmCountry === "US" ? (
+                  <div>
+                    {/* Selected state chips */}
+                    {gmSelectedStates.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {gmSelectedStates.map((st) => (
+                          <span
+                            key={st.code}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-accent/15 text-accent border border-accent/30 rounded-full"
+                          >
+                            {st.name} ({st.code})
+                            <button
+                              onClick={() => {
+                                setGmSelectedStates((prev) => prev.filter((s) => s.code !== st.code));
+                                setPreviewData(null);
+                              }}
+                              className="hover:text-white transition-colors"
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Search input */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={gmStateSearch}
+                        onChange={(e) => setGmStateSearch(e.target.value)}
+                        placeholder="Search states (e.g. New York, California)"
+                        className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+                      />
+                      {gmStateSearch && (
+                        <div className="absolute z-10 w-full mt-1 bg-card border border-card-border rounded-lg max-h-60 overflow-y-auto shadow-xl">
+                          {US_STATES
+                            .filter(
+                              (st) =>
+                                !gmSelectedStates.some((s) => s.code === st.code) &&
+                                (st.name.toLowerCase().includes(gmStateSearch.toLowerCase()) ||
+                                  st.code.toLowerCase().includes(gmStateSearch.toLowerCase()))
+                            )
+                            .slice(0, 15)
+                            .map((st) => (
+                              <button
+                                key={st.code}
+                                onClick={() => {
+                                  setGmSelectedStates((prev) => [...prev, st]);
+                                  setGmStateSearch("");
+                                  setPreviewData(null);
+                                }}
+                                className="w-full text-left px-5 py-3 text-base text-white hover:bg-accent/10 transition-colors border-b border-card-border last:border-0"
+                              >
+                                {st.name} <span className="text-gray-400">({st.code})</span>
+                              </button>
+                            ))}
+                          {US_STATES.filter(
+                            (st) =>
+                              !gmSelectedStates.some((s) => s.code === st.code) &&
+                              (st.name.toLowerCase().includes(gmStateSearch.toLowerCase()) ||
+                                st.code.toLowerCase().includes(gmStateSearch.toLowerCase()))
+                          ).length === 0 && (
+                            <div className="px-5 py-3 text-sm text-gray-400">No states found</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={gmStateFreeText}
+                    onChange={(e) => { setGmStateFreeText(e.target.value); setPreviewData(null); }}
+                    placeholder="e.g. NSW, ON, Bavaria"
+                    className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  />
+                )}
               </div>
             </div>
 
