@@ -82,26 +82,16 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
     setError("");
     try {
       if (scrape.source === "spherescout" && scrape.spherescoutSearchId) {
-        // SphereScout download flow: poll status then get URL
-        const statusRes = await fetch(
-          `/api/spherescout/status?searchId=${scrape.spherescoutSearchId}`
-        );
-        const statusData = await statusRes.json();
-        if ((statusData.status || "").toUpperCase() !== "COMPLETED") {
-          setError("Export still processing, try again shortly");
-          return;
-        }
-        const dlRes = await fetch(
+        const res = await fetch(
           `/api/spherescout/download?searchId=${scrape.spherescoutSearchId}`
         );
-        const dlData = await dlRes.json();
-        if (dlData.downloadUrl) {
-          window.open(dlData.downloadUrl, "_blank");
+        const data = await res.json();
+        if (data.downloadUrl) {
+          window.open(data.downloadUrl, "_blank");
         } else {
-          setError(dlData.error || "Download not ready");
+          setError(data.error || "Download not ready");
         }
       } else {
-        // Scravio download flow
         const res = await fetch("/api/scravio/export", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

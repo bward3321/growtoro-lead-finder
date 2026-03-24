@@ -95,27 +95,22 @@ export default function ScrapeDetailPage({
     setExporting(true);
     try {
       if (scrape?.source === "spherescout" && scrape.spherescoutSearchId) {
-        // SphereScout download flow
-        const statusRes = await fetch(
-          `/api/spherescout/status?searchId=${scrape.spherescoutSearchId}`
-        );
-        const statusData = await statusRes.json();
-        if ((statusData.status || "").toUpperCase() !== "COMPLETED") {
-          alert("Export still processing, try again shortly");
-          return;
-        }
-        const dlRes = await fetch(
+        const res = await fetch(
           `/api/spherescout/download?searchId=${scrape.spherescoutSearchId}`
         );
-        const dlData = await dlRes.json();
-        if (dlData.downloadUrl) {
-          window.open(dlData.downloadUrl, "_blank");
+        const data = await res.json();
+        if (data.downloadUrl) {
+          window.open(data.downloadUrl, "_blank");
         }
       } else {
-        const res = await fetch(`/api/scravio/campaigns/${id}/export`, { method: "POST" });
+        const res = await fetch("/api/scravio/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campaignId: id }),
+        });
         const data = await res.json();
-        if (data.download_url || data.url) {
-          window.open(data.download_url || data.url, "_blank");
+        if (data.downloadUrl) {
+          window.open(data.downloadUrl, "_blank");
         }
       }
     } finally {
