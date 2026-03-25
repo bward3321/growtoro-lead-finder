@@ -188,14 +188,11 @@ export default function NewScrapePage() {
     setGmLeadCount(null);
     setError("");
     try {
+      // V1: only category + countries — state filtering not yet supported
       const params = new URLSearchParams({
         category: String(selectedCategory.id),
         countries: gmCountry,
       });
-      const stateValue = gmCountry === "US"
-        ? gmSelectedStates.map((s) => s.code).join(",")
-        : gmStateFreeText;
-      if (stateValue) params.set("level2_locations", stateValue);
 
       const res = await fetch(`/api/spherescout/count?${params}`);
       const data = await res.json();
@@ -223,9 +220,6 @@ export default function NewScrapePage() {
           category: selectedCategory.id,
           categoryName: selectedCategory.name,
           countries: gmCountry,
-          level2_locations: (gmCountry === "US"
-            ? gmSelectedStates.map((s) => s.code).join(",")
-            : gmStateFreeText) || undefined,
           emailOnly: gmEmailOnly,
           phoneOnly: gmPhoneOnly,
         }),
@@ -530,6 +524,9 @@ export default function NewScrapePage() {
                 )}
               </div>
             </div>
+            <p className="text-xs text-gray-500 -mt-2">
+              State filtering coming soon — currently exports all {gmCountry} leads for the selected category
+            </p>
 
             {/* Contact Filters */}
             <div className="space-y-4">

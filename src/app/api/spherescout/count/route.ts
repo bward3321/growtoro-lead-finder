@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const category = searchParams.get("category");
   const countries = searchParams.get("countries");
-  const level2_locations = searchParams.get("level2_locations") || "";
 
   if (!category || !countries) {
     return Response.json({ error: "category and countries are required" }, { status: 400 });
@@ -22,14 +21,8 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "category must be a valid integer ID" }, { status: 400 });
   }
 
-  let url = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${countries}`;
-
-  if (level2_locations) {
-    const states = level2_locations.split(",").map((s) => s.trim()).filter(Boolean);
-    for (const state of states) {
-      url += `&level2_locations=${encodeURIComponent(state)}`;
-    }
-  }
+  // V1: only category + countries — level2_locations uses internal codes we don't have yet
+  const url = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${countries}`;
 
   try {
     const res = await fetch(url, {
