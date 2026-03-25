@@ -51,54 +51,8 @@ export interface SphereScoutCategory {
   gcid: string;
 }
 
-export interface SphereScoutPreviewItem {
-  name: string;
-  email: string[];
-  phone: string[] | string;
-  city: string;
-  country: string;
-  level2_location: string;
-  address: string;
-  website: string;
-  instagram: string;
-  facebook: string;
-  categories: string[];
-  rating: number;
-  review_count: number;
-  latitude: number;
-  longitude: number;
-  zipcode: string;
-  collected_at: string;
-  place_id: string;
-}
-
-export interface SphereScoutPreviewResult {
-  preview: SphereScoutPreviewItem[];
-  totalCount: number;
-  cities: string[];
-  zipCodes: string[];
-  categories: unknown[];
-}
-
 export async function getCategories(): Promise<SphereScoutCategory[]> {
   return spherescoutFetch("/api/categories/");
-}
-
-export async function getCompanies(params: {
-  category: number;
-  countries: string;
-  level2_locations?: string;
-}): Promise<SphereScoutPreviewResult> {
-  // Simple query string format — proven to work via test route
-  const query = new URLSearchParams();
-  query.set("category", String(params.category));
-  query.set("countries", params.countries);
-  if (params.level2_locations) {
-    query.set("level2_locations", params.level2_locations);
-  }
-  const qs = query.toString();
-  console.log(`[SphereScout] getCompanies query: ${qs}`);
-  return spherescoutFetch(`/api/companies/?${qs}`);
 }
 
 export async function downloadCsv(params: {

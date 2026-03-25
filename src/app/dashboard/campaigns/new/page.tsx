@@ -90,17 +90,6 @@ interface Category {
   gcid: string;
 }
 
-interface PreviewItem {
-  name: string;
-  email: string[];
-  phone: string[] | string;
-  city: string;
-  country: string;
-  level2_location: string;
-  categories?: string[];
-  [key: string]: unknown;
-}
-
 export default function NewScrapePage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -127,11 +116,8 @@ export default function NewScrapePage() {
   const [gmSelectedStates, setGmSelectedStates] = useState<{ code: string; name: string }[]>([]);
   const [gmStateSearch, setGmStateSearch] = useState("");
   const [gmStateFreeText, setGmStateFreeText] = useState("");
-  const [previewData, setPreviewData] = useState<{
-    preview: PreviewItem[];
-    totalCount: number;
-  } | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [gmEmailOnly, setGmEmailOnly] = useState(false);
+  const [gmPhoneOnly, setGmPhoneOnly] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
@@ -170,13 +156,14 @@ export default function NewScrapePage() {
   function selectPlatform(id: string) {
     setPlatform(id);
     setMethod(null);
-    setPreviewData(null);
     setSelectedCategory(null);
     setCategorySearch("");
     setGmCountry("US");
     setGmSelectedStates([]);
     setGmStateSearch("");
     setGmStateFreeText("");
+    setGmEmailOnly(false);
+    setGmPhoneOnly(false);
     setError("");
     if (id === "googlemaps") {
       // Skip method selection, go straight to configure
@@ -192,44 +179,8 @@ export default function NewScrapePage() {
     setStep(3);
   }
 
-  async function handlePreview() {
-    if (!selectedCategory) return;
-    setPreviewLoading(true);
-    setError("");
-    setPreviewData(null);
-    try {
-      const params = new URLSearchParams({
-        category: String(selectedCategory.id),
-        countries: gmCountry,
-      });
-      const stateValue = gmCountry === "US"
-        ? gmSelectedStates.map((s) => s.code).join(",")
-        : gmStateFreeText;
-      if (stateValue) params.set("level2_locations", stateValue);
-
-      const res = await fetch(`/api/spherescout/preview?${params}`);
-      const data = await res.json();
-      console.log("[GoogleMaps Preview] Full API response:", JSON.stringify(data));
-      console.log("[GoogleMaps Preview] totalCount:", data.totalCount, "type:", typeof data.totalCount);
-      console.log("[GoogleMaps Preview] preview length:", data.preview?.length);
-      if (!res.ok) {
-        setError(data.error || "Preview failed");
-        return;
-      }
-      // Read totalCount — handle both camelCase and snake_case
-      const totalCount = data.totalCount ?? data.total_count ?? data.count ?? (data.preview?.length || 0);
-      const preview = data.preview || data.results || [];
-      console.log("[GoogleMaps Preview] Setting state:", { totalCount, previewLength: preview.length });
-      setPreviewData({ preview, totalCount });
-    } catch {
-      setError("Failed to load preview");
-    } finally {
-      setPreviewLoading(false);
-    }
-  }
-
   async function handleGoogleMapsExport() {
-    if (!selectedCategory || !previewData) return;
+    if (!selectedCategory) return;
     setExportLoading(true);
     setError("");
     try {
@@ -243,7 +194,8 @@ export default function NewScrapePage() {
           level2_locations: (gmCountry === "US"
             ? gmSelectedStates.map((s) => s.code).join(",")
             : gmStateFreeText) || undefined,
-          totalCount: previewData.totalCount,
+          emailOnly: gmEmailOnly,
+          phoneOnly: gmPhoneOnly,
         }),
       });
       const data = await res.json();
@@ -387,7 +339,7 @@ export default function NewScrapePage() {
       {step === 3 && isGoogleMaps && (
         <div className="space-y-6">
           <button
-            onClick={() => { setStep(1); setPreviewData(null); }}
+            onClick={() => setStep(1)}
             className="text-base text-gray-300 hover:text-white transition-colors"
           >
             &larr; Back to platforms
@@ -421,7 +373,7 @@ export default function NewScrapePage() {
                     onChange={(e) => {
                       setCategorySearch(e.target.value);
                       setSelectedCategory(null);
-                      setPreviewData(null);
+  
                     }}
                     placeholder="Search categories (e.g. Restaurant, Plumber, Dentist)"
                     className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
@@ -434,7 +386,7 @@ export default function NewScrapePage() {
                           onClick={() => {
                             setSelectedCategory(cat);
                             setCategorySearch("");
-                            setPreviewData(null);
+        
                           }}
                           className="w-full text-left px-5 py-3 text-base text-white hover:bg-accent/10 transition-colors border-b border-card-border last:border-0"
                         >
@@ -479,7 +431,7 @@ export default function NewScrapePage() {
                             <button
                               onClick={() => {
                                 setGmSelectedStates((prev) => prev.filter((s) => s.code !== st.code));
-                                setPreviewData(null);
+            
                               }}
                               className="hover:text-white transition-colors"
                             >
@@ -516,7 +468,7 @@ export default function NewScrapePage() {
                                 onClick={() => {
                                   setGmSelectedStates((prev) => [...prev, st]);
                                   setGmStateSearch("");
-                                  setPreviewData(null);
+              
                                 }}
                                 className="w-full text-left px-5 py-3 text-base text-white hover:bg-accent/10 transition-colors border-b border-card-border last:border-0"
                               >
@@ -547,89 +499,82 @@ export default function NewScrapePage() {
               </div>
             </div>
 
-            {/* Preview Button */}
-            <button
-              onClick={handlePreview}
-              disabled={!selectedCategory || previewLoading}
-              className="w-full py-4 bg-card border border-accent/30 text-accent text-lg font-semibold rounded-lg hover:bg-accent/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {previewLoading ? "Loading Preview..." : "Preview Results"}
-            </button>
-
-            {/* Preview Results */}
-            {previewData && (
-              <div className="space-y-4">
-                <div className="p-4 bg-accent/5 border border-accent/20 rounded-lg">
-                  <p className="text-lg font-semibold text-white">
-                    {previewData.totalCount.toLocaleString()} leads available
-                  </p>
-                  <p className="text-sm text-gray-300 mt-1">
-                    Cost: {previewData.totalCount.toLocaleString()} credits (1 credit per lead)
-                  </p>
+            {/* Contact Filters */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-base font-medium text-white mb-2">
+                  Email Filter
+                </label>
+                <div className="inline-flex rounded-lg border border-card-border overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setGmEmailOnly(false)}
+                    className={`px-5 py-2.5 text-sm font-medium transition-colors ${
+                      !gmEmailOnly
+                        ? "bg-accent text-white"
+                        : "bg-card text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    All Contacts
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGmEmailOnly(true)}
+                    className={`px-5 py-2.5 text-sm font-medium transition-colors ${
+                      gmEmailOnly
+                        ? "bg-accent text-white"
+                        : "bg-card text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    With Emails Only
+                  </button>
                 </div>
-
-                {previewData.preview.length > 0 && (
-                  <div className="bg-background border border-card-border rounded-lg overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-card-border text-left text-sm text-gray-400 uppercase tracking-wider">
-                          <th className="px-4 py-2">Business Name</th>
-                          <th className="px-4 py-2">City</th>
-                          <th className="px-4 py-2">State</th>
-                          <th className="px-4 py-2">Email</th>
-                          <th className="px-4 py-2">Phone</th>
-                          <th className="px-4 py-2">Categories</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {previewData.preview.slice(0, 10).map((item, i) => {
-                          const hasEmail = Array.isArray(item.email) ? item.email.length > 0 : !!item.email;
-                          const hasPhone = Array.isArray(item.phone) ? item.phone.length > 0 : !!item.phone;
-                          return (
-                            <tr
-                              key={i}
-                              className="border-b border-card-border last:border-0"
-                            >
-                              <td className="px-4 py-2 text-sm text-white">{item.name || "-"}</td>
-                              <td className="px-4 py-2 text-sm text-gray-300">{item.city || "-"}</td>
-                              <td className="px-4 py-2 text-sm text-gray-300">{item.level2_location || "-"}</td>
-                              <td className="px-4 py-2 text-sm text-gray-300">
-                                {hasEmail ? (
-                                  <span className="text-success">Has email</span>
-                                ) : (
-                                  <span className="text-gray-500">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-2 text-sm text-gray-300">
-                                {hasPhone ? (
-                                  <span className="text-success">Has phone</span>
-                                ) : (
-                                  <span className="text-gray-500">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-2 text-sm text-gray-300 max-w-[200px] truncate">
-                                {item.categories?.join(", ") || "-"}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* Export Button */}
-                <button
-                  onClick={handleGoogleMapsExport}
-                  disabled={exportLoading || previewData.totalCount === 0}
-                  className="w-full py-4 bg-gradient-to-r from-accent to-accent-cyan text-white text-lg font-semibold rounded-lg hover:from-accent/90 hover:to-accent-cyan/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {exportLoading
-                    ? "Exporting..."
-                    : `Export ${previewData.totalCount.toLocaleString()} Leads (${previewData.totalCount.toLocaleString()} credits)`}
-                </button>
               </div>
-            )}
+
+              <div>
+                <label className="block text-base font-medium text-white mb-2">
+                  Phone Filter
+                </label>
+                <div className="inline-flex rounded-lg border border-card-border overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setGmPhoneOnly(false)}
+                    className={`px-5 py-2.5 text-sm font-medium transition-colors ${
+                      !gmPhoneOnly
+                        ? "bg-accent text-white"
+                        : "bg-card text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    All Contacts
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGmPhoneOnly(true)}
+                    className={`px-5 py-2.5 text-sm font-medium transition-colors ${
+                      gmPhoneOnly
+                        ? "bg-accent text-white"
+                        : "bg-card text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    With Phone Only
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Credit note */}
+            <p className="text-sm text-gray-400">
+              Credits are deducted based on the number of leads exported (1 credit per lead)
+            </p>
+
+            {/* Export Button */}
+            <button
+              onClick={handleGoogleMapsExport}
+              disabled={!selectedCategory || exportLoading}
+              className="w-full py-4 bg-success text-white text-lg font-semibold rounded-lg hover:bg-success/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exportLoading ? "Exporting..." : "Export Leads"}
+            </button>
           </div>
         </div>
       )}
