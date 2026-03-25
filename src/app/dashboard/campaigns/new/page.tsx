@@ -118,6 +118,8 @@ export default function NewScrapePage() {
   const [gmStateFreeText, setGmStateFreeText] = useState("");
   const [gmEmailOnly, setGmEmailOnly] = useState(false);
   const [gmPhoneOnly, setGmPhoneOnly] = useState(false);
+  const [gmLeadCount, setGmLeadCount] = useState<number | null>(null);
+  const [gmCountLoading, setGmCountLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
@@ -164,6 +166,7 @@ export default function NewScrapePage() {
     setGmStateFreeText("");
     setGmEmailOnly(false);
     setGmPhoneOnly(false);
+    setGmLeadCount(null);
     setError("");
     if (id === "googlemaps") {
       // Skip method selection, go straight to configure
@@ -177,6 +180,35 @@ export default function NewScrapePage() {
     setMethod(m);
     setScrapeName(`${platform} - ${m.label}`);
     setStep(3);
+  }
+
+  async function handleCheckAvailability() {
+    if (!selectedCategory) return;
+    setGmCountLoading(true);
+    setGmLeadCount(null);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        category: String(selectedCategory.id),
+        countries: gmCountry,
+      });
+      const stateValue = gmCountry === "US"
+        ? gmSelectedStates.map((s) => s.code).join(",")
+        : gmStateFreeText;
+      if (stateValue) params.set("level2_locations", stateValue);
+
+      const res = await fetch(`/api/spherescout/count?${params}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to check availability");
+        return;
+      }
+      setGmLeadCount(data.totalCount ?? 0);
+    } catch {
+      setError("Failed to check availability");
+    } finally {
+      setGmCountLoading(false);
+    }
   }
 
   async function handleGoogleMapsExport() {
@@ -373,7 +405,7 @@ export default function NewScrapePage() {
                     onChange={(e) => {
                       setCategorySearch(e.target.value);
                       setSelectedCategory(null);
-  
+                      setGmLeadCount(null);
                     }}
                     placeholder="Search categories (e.g. Restaurant, Plumber, Dentist)"
                     className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
@@ -405,7 +437,7 @@ export default function NewScrapePage() {
                 <label className="block text-base font-medium text-white mb-2">Country</label>
                 <select
                   value={gmCountry}
-                  onChange={(e) => { setGmCountry(e.target.value); setGmSelectedStates([]); setGmStateSearch(""); setGmStateFreeText(""); setPreviewData(null); }}
+                  onChange={(e) => { setGmCountry(e.target.value); setGmSelectedStates([]); setGmStateSearch(""); setGmStateFreeText(""); setGmLeadCount(null); }}
                   className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base focus:outline-none focus:ring-2 focus:ring-accent/50"
                 >
                   {COUNTRIES.filter(Boolean).map((c) => (
@@ -431,7 +463,7 @@ export default function NewScrapePage() {
                             <button
                               onClick={() => {
                                 setGmSelectedStates((prev) => prev.filter((s) => s.code !== st.code));
-            
+                                setGmLeadCount(null);
                               }}
                               className="hover:text-white transition-colors"
                             >
@@ -468,7 +500,7 @@ export default function NewScrapePage() {
                                 onClick={() => {
                                   setGmSelectedStates((prev) => [...prev, st]);
                                   setGmStateSearch("");
-              
+                                  setGmLeadCount(null);
                                 }}
                                 className="w-full text-left px-5 py-3 text-base text-white hover:bg-accent/10 transition-colors border-b border-card-border last:border-0"
                               >
@@ -491,7 +523,7 @@ export default function NewScrapePage() {
                   <input
                     type="text"
                     value={gmStateFreeText}
-                    onChange={(e) => { setGmStateFreeText(e.target.value); setPreviewData(null); }}
+                    onChange={(e) => { setGmStateFreeText(e.target.value); setGmLeadCount(null); }}
                     placeholder="e.g. NSW, ON, Bavaria"
                     className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent/50"
                   />
@@ -562,18 +594,62 @@ export default function NewScrapePage() {
               </div>
             </div>
 
-            {/* Credit note */}
-            <p className="text-sm text-gray-400">
-              Credits are deducted based on the number of leads exported (1 credit per lead)
-            </p>
+            {/* Check Availability */}
+            <button
+              onClick={handleCheckAvailability}
+              disabled={!selectedCategory || gmCountLoading}
+              className="w-full py-3.5 bg-card border border-accent/30 text-accent text-base font-semibold rounded-lg hover:bg-accent/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {gmCountLoading ? "Checking..." : "Check Availability"}
+            </button>
+
+            {/* Lead Count Display */}
+            {gmLeadCount !== null && gmLeadCount > 0 && (
+              <div className="p-5 bg-success/5 border border-success/20 rounded-lg">
+                <p className="text-3xl font-bold text-white">
+                  {gmLeadCount.toLocaleString()}{" "}
+                  <span className="text-lg font-medium text-success">business contacts available</span>
+                </p>
+                <p className="text-sm text-gray-300 mt-2">
+                  Cost: <span className="text-accent-cyan font-semibold">{gmLeadCount.toLocaleString()} credits</span> (1 credit per lead)
+                </p>
+                {gmEmailOnly && (
+                  <p className="text-sm text-gray-400 mt-1">Filtered to contacts with emails only</p>
+                )}
+                {gmPhoneOnly && (
+                  <p className="text-sm text-gray-400 mt-1">Filtered to contacts with phone numbers only</p>
+                )}
+              </div>
+            )}
+
+            {gmLeadCount !== null && gmLeadCount === 0 && (
+              <div className="p-5 bg-danger/5 border border-danger/20 rounded-lg">
+                <p className="text-base text-danger font-medium">
+                  No leads found for this search.
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Try a different category or remove state filters.
+                </p>
+              </div>
+            )}
+
+            {gmLeadCount === null && !gmCountLoading && (
+              <p className="text-sm text-gray-400">
+                Select a category and click Check Availability to see how many leads are available.
+              </p>
+            )}
 
             {/* Export Button */}
             <button
               onClick={handleGoogleMapsExport}
-              disabled={!selectedCategory || exportLoading}
+              disabled={!selectedCategory || exportLoading || gmLeadCount === null || gmLeadCount === 0}
               className="w-full py-4 bg-success text-white text-lg font-semibold rounded-lg hover:bg-success/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {exportLoading ? "Exporting..." : "Export Leads"}
+              {exportLoading
+                ? "Exporting..."
+                : gmLeadCount && gmLeadCount > 0
+                  ? `Export ${gmLeadCount.toLocaleString()} Leads (${gmLeadCount.toLocaleString()} credits)`
+                  : "Export Leads"}
             </button>
           </div>
         </div>
