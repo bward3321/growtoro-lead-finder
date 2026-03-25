@@ -243,9 +243,12 @@ export default function NewScrapePage() {
         setError(data.error || "Export failed");
         return;
       }
-      router.push(`/dashboard/campaigns/${data.campaign.id}`);
-    } catch {
-      setError("Something went wrong");
+      const count = data.leadCount || 0;
+      router.push(
+        `/dashboard/campaigns/${data.campaign.id}?success=${encodeURIComponent(`Export started! ${count.toLocaleString()} leads are being processed.`)}`
+      );
+    } catch (err: any) {
+      setError(err?.message || "Export request failed — check your connection and try again");
     } finally {
       setExportLoading(false);
     }

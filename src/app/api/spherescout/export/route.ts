@@ -23,55 +23,76 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Insufficient credits" }, { status: 402 });
   }
 
-  // Call SphereScout first to get lead_count
-  let result;
+  // Call SphereScout to start the export
+  let result: Record<string, unknown>;
   try {
     result = await spherescout.downloadCsv({
       category: parseInt(String(category), 10),
       countries,
       level1_locations: level1_locations,
+      email: emailOnly || undefined,
+      phone: phoneOnly || undefined,
     });
+    console.log("[SphereScout Export] Full response:", JSON.stringify(result));
   } catch (error: any) {
-    console.error("[SphereScout Export]", error.message);
+    console.error("[SphereScout Export] Error:", error.message);
+    if (error.spherescoutResponse) {
+      console.error("[SphereScout Export] API response:", JSON.stringify(error.spherescoutResponse));
+    }
     return Response.json(
       { error: `Export failed: ${error.message}` },
       { status: 502 }
     );
   }
 
-  const searchId = result.search_id;
-  const leadCount = result.lead_count || 0;
+  // SphereScout may return search_id or searchId — handle both
+  const searchId = String(result.search_id ?? result.searchId ?? "");
+  const leadCount = Number(result.lead_count ?? result.leadCount ?? result.total_count ?? 0);
+
+  console.log("[SphereScout Export] Parsed searchId:", searchId, "leadCount:", leadCount);
 
   if (!searchId) {
-    return Response.json({ error: "No search ID returned from API" }, { status: 502 });
+    console.error("[SphereScout Export] No search ID in response. Keys:", Object.keys(result));
+    return Response.json(
+      { error: "No search ID returned from SphereScout. Response: " + JSON.stringify(result) },
+      { status: 502 }
+    );
   }
 
   // Deduct credits based on actual lead_count (capped at user's balance)
   const creditsToDeduct = Math.min(leadCount, Math.floor(user.credits));
 
-  const campaign = await prisma.campaign.create({
-    data: {
-      userId: session.id,
-      name: `Google Maps - ${categoryName || "Business Search"}`,
-      platform: "googlemaps",
-      extractionType: "GOOGLEMAPS_BUSINESS_SEARCH",
-      source: "spherescout",
-      targetCount: leadCount,
-      creditsUsed: creditsToDeduct,
-      config: JSON.stringify({ category, categoryName, countries, emailOnly, phoneOnly, level1_locations }),
-      status: "PROCESSING",
-      spherescoutSearchId: searchId,
-    },
-  });
+  try {
+    const campaign = await prisma.campaign.create({
+      data: {
+        userId: session.id,
+        name: `Google Maps - ${categoryName || "Business Search"}`,
+        platform: "googlemaps",
+        extractionType: "GOOGLEMAPS_BUSINESS_SEARCH",
+        source: "spherescout",
+        targetCount: leadCount,
+        creditsUsed: creditsToDeduct,
+        config: JSON.stringify({ category, categoryName, countries, emailOnly, phoneOnly, level1_locations }),
+        status: "PROCESSING",
+        spherescoutSearchId: searchId,
+      },
+    });
 
-  await prisma.user.update({
-    where: { id: session.id },
-    data: { credits: { decrement: creditsToDeduct } },
-  });
+    await prisma.user.update({
+      where: { id: session.id },
+      data: { credits: { decrement: creditsToDeduct } },
+    });
 
-  return Response.json({
-    campaign,
-    searchId,
-    leadCount,
-  });
+    return Response.json({
+      campaign,
+      searchId,
+      leadCount,
+    });
+  } catch (dbError: any) {
+    console.error("[SphereScout Export] Database error:", dbError.message);
+    return Response.json(
+      { error: `Export succeeded on SphereScout but failed to save: ${dbError.message}` },
+      { status: 500 }
+    );
+  }
 }

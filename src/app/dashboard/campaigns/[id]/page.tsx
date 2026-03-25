@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Scrape {
   id: string;
@@ -35,6 +35,9 @@ export default function ScrapeDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const successMessage = searchParams.get("success");
+  const [showSuccess, setShowSuccess] = useState(!!successMessage);
   const [scrape, setScrape] = useState<Scrape | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,6 +191,14 @@ export default function ScrapeDetailPage({
 
   return (
     <div className="space-y-8">
+      {showSuccess && successMessage && (
+        <div className="flex items-center justify-between px-5 py-3 bg-success/10 border border-success/30 rounded-lg">
+          <p className="text-success text-base">{successMessage}</p>
+          <button onClick={() => setShowSuccess(false)} className="text-success/60 hover:text-success ml-4">
+            &times;
+          </button>
+        </div>
+      )}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">{scrape.name}</h1>

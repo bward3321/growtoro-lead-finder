@@ -59,6 +59,8 @@ export async function downloadCsv(params: {
   category: number;
   countries: string;
   level1_locations?: number[];
+  email?: boolean;
+  phone?: boolean;
 }): Promise<{ status: string; search_id: string; lead_count: number }> {
   let url = `/api/download-csv/?category=${params.category}&countries=${encodeURIComponent(params.countries)}`;
   if (params.level1_locations?.length) {
@@ -66,6 +68,8 @@ export async function downloadCsv(params: {
       url += `&level1_locations=${id}`;
     }
   }
+  if (params.email) url += "&email=true";
+  if (params.phone) url += "&phone=true";
   url += "&export_format=csv";
   console.log(`[SphereScout] downloadCsv URL: ${url}`);
   return spherescoutFetch(url, { method: "POST" });
