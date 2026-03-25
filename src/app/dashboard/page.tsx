@@ -81,16 +81,14 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
     setLoading(true);
     setError("");
     try {
+      let downloadUrl: string | undefined;
       if (scrape.source === "spherescout" && scrape.spherescoutSearchId) {
         const res = await fetch(
           `/api/spherescout/download?searchId=${scrape.spherescoutSearchId}`
         );
         const data = await res.json();
-        if (data.downloadUrl) {
-          window.open(data.downloadUrl, "_blank");
-        } else {
-          setError(data.error || "Download not ready");
-        }
+        if (!data.downloadUrl) { setError(data.error || "Download not ready"); return; }
+        downloadUrl = data.downloadUrl;
       } else {
         const res = await fetch("/api/scravio/export", {
           method: "POST",
@@ -98,12 +96,13 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
           body: JSON.stringify({ campaignId: scrape.id }),
         });
         const data = await res.json();
-        if (data.downloadUrl) {
-          window.open(data.downloadUrl, "_blank");
-        } else {
-          setError(data.error || "Export failed");
-        }
+        if (!data.downloadUrl) { setError(data.error || "Export failed"); return; }
+        downloadUrl = data.downloadUrl;
       }
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const filename = `growtoro_leads_${scrape.platform || "export"}_${dateStr}.csv`;
+      const proxyUrl = `/api/spherescout/download-proxy?url=${encodeURIComponent(downloadUrl)}&filename=${encodeURIComponent(filename)}`;
+      window.open(proxyUrl, "_blank");
     } catch {
       setError("Network error");
     } finally {
