@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { category, categoryName, countries, emailOnly, phoneOnly } = body;
+  const { category, categoryName, countries, emailOnly, phoneOnly, level1_locations } = body;
 
   if (!category || !countries) {
     return Response.json(
@@ -26,10 +26,10 @@ export async function POST(request: NextRequest) {
   // Call SphereScout first to get lead_count
   let result;
   try {
-    // V1: only category + countries — level2_locations uses internal codes we don't have yet
     result = await spherescout.downloadCsv({
       category: parseInt(String(category), 10),
       countries,
+      level1_locations: level1_locations,
     });
   } catch (error: any) {
     console.error("[SphereScout Export]", error.message);
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       source: "spherescout",
       targetCount: leadCount,
       creditsUsed: creditsToDeduct,
-      config: JSON.stringify({ category, categoryName, countries, emailOnly, phoneOnly }),
+      config: JSON.stringify({ category, categoryName, countries, emailOnly, phoneOnly, level1_locations }),
       status: "PROCESSING",
       spherescoutSearchId: searchId,
     },

@@ -58,13 +58,12 @@ export async function getCategories(): Promise<SphereScoutCategory[]> {
 export async function downloadCsv(params: {
   category: number;
   countries: string;
-  level2_locations?: string;
+  level1_locations?: number[];
 }): Promise<{ status: string; search_id: string; lead_count: number }> {
   let url = `/api/download-csv/?category=${params.category}&countries=${encodeURIComponent(params.countries)}`;
-  if (params.level2_locations) {
-    const states = params.level2_locations.split(",").map((s) => s.trim()).filter(Boolean);
-    for (const state of states) {
-      url += `&level2_locations=${encodeURIComponent(state)}`;
+  if (params.level1_locations?.length) {
+    for (const id of params.level1_locations) {
+      url += `&level1_locations=${id}`;
     }
   }
   url += "&export_format=csv";

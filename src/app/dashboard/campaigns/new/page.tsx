@@ -65,23 +65,32 @@ const LANGUAGES = [
 ];
 
 const US_STATES = [
-  { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" }, { code: "AZ", name: "Arizona" },
-  { code: "AR", name: "Arkansas" }, { code: "CA", name: "California" }, { code: "CO", name: "Colorado" },
-  { code: "CT", name: "Connecticut" }, { code: "DE", name: "Delaware" }, { code: "FL", name: "Florida" },
-  { code: "GA", name: "Georgia" }, { code: "HI", name: "Hawaii" }, { code: "ID", name: "Idaho" },
-  { code: "IL", name: "Illinois" }, { code: "IN", name: "Indiana" }, { code: "IA", name: "Iowa" },
-  { code: "KS", name: "Kansas" }, { code: "KY", name: "Kentucky" }, { code: "LA", name: "Louisiana" },
-  { code: "ME", name: "Maine" }, { code: "MD", name: "Maryland" }, { code: "MA", name: "Massachusetts" },
-  { code: "MI", name: "Michigan" }, { code: "MN", name: "Minnesota" }, { code: "MS", name: "Mississippi" },
-  { code: "MO", name: "Missouri" }, { code: "MT", name: "Montana" }, { code: "NE", name: "Nebraska" },
-  { code: "NV", name: "Nevada" }, { code: "NH", name: "New Hampshire" }, { code: "NJ", name: "New Jersey" },
-  { code: "NM", name: "New Mexico" }, { code: "NY", name: "New York" }, { code: "NC", name: "North Carolina" },
-  { code: "ND", name: "North Dakota" }, { code: "OH", name: "Ohio" }, { code: "OK", name: "Oklahoma" },
-  { code: "OR", name: "Oregon" }, { code: "PA", name: "Pennsylvania" }, { code: "RI", name: "Rhode Island" },
-  { code: "SC", name: "South Carolina" }, { code: "SD", name: "South Dakota" }, { code: "TN", name: "Tennessee" },
-  { code: "TX", name: "Texas" }, { code: "UT", name: "Utah" }, { code: "VT", name: "Vermont" },
-  { code: "VA", name: "Virginia" }, { code: "WA", name: "Washington" }, { code: "WV", name: "West Virginia" },
-  { code: "WI", name: "Wisconsin" }, { code: "WY", name: "Wyoming" },
+  { id: 77, code: "AL", name: "Alabama" }, { id: 61, code: "AK", name: "Alaska" },
+  { id: 46, code: "AZ", name: "Arizona" }, { id: 49, code: "AR", name: "Arkansas" },
+  { id: 43, code: "CA", name: "California" }, { id: 52, code: "CO", name: "Colorado" },
+  { id: 87, code: "CT", name: "Connecticut" }, { id: 79, code: "DE", name: "Delaware" },
+  { id: 90, code: "DC", name: "District of Columbia" }, { id: 57, code: "FL", name: "Florida" },
+  { id: 42, code: "GA", name: "Georgia" }, { id: 88, code: "HI", name: "Hawaii" },
+  { id: 76, code: "ID", name: "Idaho" }, { id: 47, code: "IL", name: "Illinois" },
+  { id: 51, code: "IN", name: "Indiana" }, { id: 71, code: "IA", name: "Iowa" },
+  { id: 65, code: "KS", name: "Kansas" }, { id: 58, code: "KY", name: "Kentucky" },
+  { id: 44, code: "LA", name: "Louisiana" }, { id: 78, code: "ME", name: "Maine" },
+  { id: 74, code: "MD", name: "Maryland" }, { id: 70, code: "MA", name: "Massachusetts" },
+  { id: 59, code: "MI", name: "Michigan" }, { id: 55, code: "MN", name: "Minnesota" },
+  { id: 72, code: "MS", name: "Mississippi" }, { id: 64, code: "MO", name: "Missouri" },
+  { id: 85, code: "MT", name: "Montana" }, { id: 75, code: "NE", name: "Nebraska" },
+  { id: 81, code: "NV", name: "Nevada" }, { id: 84, code: "NH", name: "New Hampshire" },
+  { id: 54, code: "NJ", name: "New Jersey" }, { id: 69, code: "NM", name: "New Mexico" },
+  { id: 53, code: "NY", name: "New York" }, { id: 50, code: "NC", name: "North Carolina" },
+  { id: 83, code: "ND", name: "North Dakota" }, { id: 45, code: "OH", name: "Ohio" },
+  { id: 68, code: "OK", name: "Oklahoma" }, { id: 80, code: "OR", name: "Oregon" },
+  { id: 67, code: "PA", name: "Pennsylvania" }, { id: 89, code: "RI", name: "Rhode Island" },
+  { id: 62, code: "SC", name: "South Carolina" }, { id: 82, code: "SD", name: "South Dakota" },
+  { id: 41, code: "TN", name: "Tennessee" }, { id: 40, code: "TX", name: "Texas" },
+  { id: 60, code: "UT", name: "Utah" }, { id: 86, code: "VT", name: "Vermont" },
+  { id: 48, code: "VA", name: "Virginia" }, { id: 63, code: "WA", name: "Washington" },
+  { id: 73, code: "WV", name: "West Virginia" }, { id: 56, code: "WI", name: "Wisconsin" },
+  { id: 66, code: "WY", name: "Wyoming" },
 ];
 
 interface Category {
@@ -113,7 +122,7 @@ export default function NewScrapePage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [gmCountry, setGmCountry] = useState("US");
-  const [gmSelectedStates, setGmSelectedStates] = useState<{ code: string; name: string }[]>([]);
+  const [gmSelectedStates, setGmSelectedStates] = useState<{ id: number; code: string; name: string }[]>([]);
   const [gmStateSearch, setGmStateSearch] = useState("");
   const [gmStateFreeText, setGmStateFreeText] = useState("");
   const [gmEmailOnly, setGmEmailOnly] = useState(false);
@@ -188,13 +197,15 @@ export default function NewScrapePage() {
     setGmLeadCount(null);
     setError("");
     try {
-      // V1: only category + countries — state filtering not yet supported
       const params = new URLSearchParams({
         category: String(selectedCategory.id),
         countries: gmCountry,
       });
       if (gmEmailOnly) params.set("email", "true");
       if (gmPhoneOnly) params.set("phone", "true");
+      for (const s of gmSelectedStates) {
+        params.append("level1_locations", String(s.id));
+      }
 
       const res = await fetch(`/api/spherescout/count?${params}`);
       const data = await res.json();
@@ -224,6 +235,7 @@ export default function NewScrapePage() {
           countries: gmCountry,
           emailOnly: gmEmailOnly,
           phoneOnly: gmPhoneOnly,
+          level1_locations: gmSelectedStates.map((s) => s.id),
         }),
       });
       const data = await res.json();
@@ -526,9 +538,6 @@ export default function NewScrapePage() {
                 )}
               </div>
             </div>
-            <p className="text-xs text-gray-500 -mt-2">
-              State filtering coming soon — currently exports all {gmCountry} leads for the selected category
-            </p>
 
             {/* Contact Filters */}
             <div className="space-y-4">

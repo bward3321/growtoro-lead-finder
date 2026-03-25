@@ -23,10 +23,13 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "category must be a valid integer ID" }, { status: 400 });
   }
 
-  // V1: only category + countries — level2_locations uses internal codes we don't have yet
   let url = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${countries}`;
   if (emailOnly) url += "&email=true";
   if (phoneOnly) url += "&phone=true";
+  const stateIds = searchParams.getAll("level1_locations");
+  for (const id of stateIds) {
+    url += `&level1_locations=${encodeURIComponent(id)}`;
+  }
 
   try {
     const res = await fetch(url, {
