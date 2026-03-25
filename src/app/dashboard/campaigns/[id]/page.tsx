@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useRef, useCallback, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 interface Scrape {
@@ -44,19 +44,42 @@ export default function ScrapeDetailPage({
   const [exporting, setExporting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [ssProgress, setSsProgress] = useState(0);
+  const pollCountRef = useRef(0);
 
-  async function fetchScrape() {
-    setLoading(true);
+  const fetchScrape = useCallback(async (isPolling = false) => {
+    if (!isPolling) setLoading(true);
     try {
-      // Sync with Scravio first (the GET handler calls syncCampaignStatus)
       const res = await fetch(`/api/scravio/campaigns/${id}`);
       const data = await res.json();
-      setScrape(data.campaign);
+      const campaign = data.campaign;
+      setScrape(campaign);
+
+      // Update SphereScout progress based on actual status
+      if (campaign?.source === "spherescout") {
+        const ssStatus = (data.spherescoutStatus || "").toUpperCase();
+        if (campaign.status === "COMPLETED") {
+          setSsProgress(100);
+        } else if (campaign.status === "FAILED") {
+          setSsProgress(0);
+        } else if (ssStatus === "PENDING") {
+          setSsProgress(10);
+        } else if (ssStatus === "PROCESSING") {
+          // Increment between 30-70% to show movement
+          setSsProgress((prev) => {
+            if (prev >= 70) return 70;
+            if (prev < 30) return 30;
+            return Math.min(70, prev + 10);
+          });
+        } else {
+          setSsProgress((prev) => (prev < 10 ? 5 : prev));
+        }
+      }
 
       // Only fetch leads for Scravio campaigns (SphereScout is CSV-only)
       if (
-        data.campaign?.source !== "spherescout" &&
-        (data.campaign?.status === "COMPLETED" || data.campaign?.leadsFound > 0)
+        campaign?.source !== "spherescout" &&
+        (campaign?.status === "COMPLETED" || campaign?.leadsFound > 0)
       ) {
         const leadsRes = await fetch(`/api/scravio/campaigns/${id}/leads`);
         const leadsData = await leadsRes.json();
@@ -65,24 +88,26 @@ export default function ScrapeDetailPage({
     } catch (err) {
       console.error("Failed to fetch scrape:", err);
     } finally {
-      setLoading(false);
+      if (!isPolling) setLoading(false);
     }
-  }
+  }, [id]);
 
   useEffect(() => {
     fetchScrape();
-  }, [id]);
+  }, [fetchScrape]);
 
-  // Auto-poll every 15 seconds while scrape is active
+  // Auto-poll: 5s for SphereScout processing, 15s for Scravio
   useEffect(() => {
     if (!scrape || ["COMPLETED", "FAILED", "STOPPED"].includes(scrape.status)) return;
 
-    const interval = setInterval(() => {
-      fetchScrape();
-    }, 15000);
+    const interval = scrape.source === "spherescout" ? 5000 : 15000;
+    const timer = setInterval(() => {
+      pollCountRef.current++;
+      fetchScrape(true);
+    }, interval);
 
-    return () => clearInterval(interval);
-  }, [scrape?.status, id]);
+    return () => clearInterval(timer);
+  }, [scrape?.status, scrape?.source, fetchScrape]);
 
   async function handleStop() {
     setStopping(true);
@@ -97,28 +122,53 @@ export default function ScrapeDetailPage({
   async function handleExport() {
     setExporting(true);
     try {
-      let res: Response;
       if (scrape?.source === "spherescout" && scrape.spherescoutSearchId) {
-        res = await fetch(
+        // Get download URL, then proxy through our route for custom filename
+        const res = await fetch(
           `/api/spherescout/download?searchId=${scrape.spherescoutSearchId}`
         );
+        const data = await res.json();
+        if (!res.ok || !data.downloadUrl) {
+          alert(data.error || "Download not ready yet — try again in a moment.");
+          return;
+        }
+        // Download through proxy to rename the file
+        const categoryName = getCategoryName();
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const filename = `growtoro_leads_${categoryName}_${dateStr}.csv`;
+        const proxyUrl = `/api/spherescout/download-proxy?url=${encodeURIComponent(data.downloadUrl)}&filename=${encodeURIComponent(filename)}`;
+        window.open(proxyUrl, "_blank");
       } else {
-        res = await fetch("/api/scravio/export", {
+        const res = await fetch("/api/scravio/export", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ campaignId: id }),
         });
+        const data = await res.json();
+        if (!res.ok || !data.downloadUrl) {
+          alert(data.error || "Download not ready yet — try again in a moment.");
+          return;
+        }
+        // Download through proxy to rename the file
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const filename = `growtoro_leads_${scrape?.platform || "export"}_${dateStr}.csv`;
+        const proxyUrl = `/api/spherescout/download-proxy?url=${encodeURIComponent(data.downloadUrl)}&filename=${encodeURIComponent(filename)}`;
+        window.open(proxyUrl, "_blank");
       }
-      const data = await res.json();
-      if (!res.ok || !data.downloadUrl) {
-        alert(data.error || "Download not ready yet — try again in a moment.");
-        return;
-      }
-      window.open(data.downloadUrl, "_blank");
     } catch {
       alert("Failed to prepare download — check your connection and try again.");
     } finally {
       setExporting(false);
+    }
+  }
+
+  function getCategoryName(): string {
+    if (!scrape?.config) return "export";
+    try {
+      const config = JSON.parse(scrape.config);
+      return (config.categoryName || "export").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+    } catch {
+      return "export";
     }
   }
 
@@ -149,7 +199,8 @@ export default function ScrapeDetailPage({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${scrape?.name || "leads"}.csv`;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `growtoro_leads_${scrape?.platform || "export"}_${dateStr}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -182,7 +233,7 @@ export default function ScrapeDetailPage({
 
   const isSphereScout = scrape.source === "spherescout";
   const progress = isSphereScout
-    ? (scrape.status === "COMPLETED" ? 100 : scrape.status === "PROCESSING" ? 50 : 0)
+    ? ssProgress
     : scrape.targetCount > 0
       ? Math.min(100, Math.round((scrape.leadsFound / scrape.targetCount) * 100))
       : 0;
@@ -296,8 +347,8 @@ export default function ScrapeDetailPage({
         </div>
         <div className="h-3 bg-card border border-card-border rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-accent to-accent-cyan rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
+            className="h-full bg-gradient-to-r from-accent to-accent-cyan rounded-full"
+            style={{ width: `${progress}%`, transition: "width 0.5s ease" }}
           />
         </div>
       </div>
@@ -320,6 +371,15 @@ export default function ScrapeDetailPage({
               {exporting ? "Preparing..." : "Download CSV"}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* SphereScout failed */}
+      {scrape.source === "spherescout" && scrape.status === "FAILED" && (
+        <div className="p-6 bg-card border border-danger/30 rounded-xl">
+          <p className="text-danger text-base">
+            Export failed. Your credits have been refunded.
+          </p>
         </div>
       )}
 

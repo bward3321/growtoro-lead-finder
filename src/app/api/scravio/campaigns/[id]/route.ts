@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { syncCampaignStatus, getQueuePosition } from "@/lib/queue";
+import * as spherescout from "@/lib/spherescout";
 
 export async function GET(
   _request: NextRequest,
@@ -17,7 +18,42 @@ export async function GET(
 
   if (!campaign) return Response.json({ error: "Not found" }, { status: 404 });
 
-  // Sync status from Scravio (also triggers queue if completed)
+  // SphereScout campaigns: sync status directly
+  if (campaign.source === "spherescout" && campaign.spherescoutSearchId) {
+    if (!["COMPLETED", "FAILED"].includes(campaign.status)) {
+      try {
+        const result = await spherescout.getDownloadStatus(campaign.spherescoutSearchId);
+        const ssStatus = (result.status || "").toUpperCase();
+        console.log(`[SphereScout Sync] campaign=${id} status=${ssStatus}`, JSON.stringify(result));
+
+        if (ssStatus === "COMPLETED") {
+          const updated = await prisma.campaign.update({
+            where: { id },
+            data: { status: "COMPLETED", leadsFound: campaign.targetCount },
+          });
+          return Response.json({ campaign: updated, spherescoutStatus: ssStatus });
+        } else if (ssStatus === "FAILED" || ssStatus === "ERROR") {
+          const updated = await prisma.campaign.update({
+            where: { id },
+            data: { status: "FAILED", creditsUsed: 0, creditsRefunded: campaign.creditsUsed },
+          });
+          await prisma.user.update({
+            where: { id: campaign.userId },
+            data: { credits: { increment: campaign.creditsUsed } },
+          });
+          return Response.json({ campaign: updated, spherescoutStatus: ssStatus });
+        }
+
+        return Response.json({ campaign, spherescoutStatus: ssStatus });
+      } catch (error: any) {
+        console.error(`[SphereScout Sync] Failed for campaign ${id}:`, error.message);
+        return Response.json({ campaign });
+      }
+    }
+    return Response.json({ campaign });
+  }
+
+  // Scravio campaigns: sync via queue
   const updated = await syncCampaignStatus(id);
 
   let queuePosition = 0;
