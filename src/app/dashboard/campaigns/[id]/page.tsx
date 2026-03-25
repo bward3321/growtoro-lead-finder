@@ -97,25 +97,26 @@ export default function ScrapeDetailPage({
   async function handleExport() {
     setExporting(true);
     try {
+      let res: Response;
       if (scrape?.source === "spherescout" && scrape.spherescoutSearchId) {
-        const res = await fetch(
+        res = await fetch(
           `/api/spherescout/download?searchId=${scrape.spherescoutSearchId}`
         );
-        const data = await res.json();
-        if (data.downloadUrl) {
-          window.open(data.downloadUrl, "_blank");
-        }
       } else {
-        const res = await fetch("/api/scravio/export", {
+        res = await fetch("/api/scravio/export", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ campaignId: id }),
         });
-        const data = await res.json();
-        if (data.downloadUrl) {
-          window.open(data.downloadUrl, "_blank");
-        }
       }
+      const data = await res.json();
+      if (!res.ok || !data.downloadUrl) {
+        alert(data.error || "Download not ready yet — try again in a moment.");
+        return;
+      }
+      window.open(data.downloadUrl, "_blank");
+    } catch {
+      alert("Failed to prepare download — check your connection and try again.");
     } finally {
       setExporting(false);
     }

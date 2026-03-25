@@ -22,11 +22,33 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await spherescout.getDownloadUrl(searchId);
-    return Response.json({ downloadUrl: result.url || result });
+    console.log("[SphereScout Download] Full response:", JSON.stringify(result));
+
+    // Extract URL — check all possible field locations
+    const downloadUrl =
+      (typeof result === "string" ? result : null) ||
+      result?.url ||
+      result?.download_url ||
+      result?.downloadUrl ||
+      result?.data?.url ||
+      result?.data?.download_url;
+
+    if (!downloadUrl || typeof downloadUrl !== "string") {
+      console.error("[SphereScout Download] No URL found in response. Keys:", Object.keys(result || {}));
+      return Response.json(
+        { error: "Download not ready yet — SphereScout is still processing. Try again in a moment." },
+        { status: 202 }
+      );
+    }
+
+    return Response.json({ downloadUrl });
   } catch (error: any) {
-    console.error("[SphereScout Download]", error.message);
+    console.error("[SphereScout Download] Error:", error.message);
+    if (error.spherescoutResponse) {
+      console.error("[SphereScout Download] API response:", JSON.stringify(error.spherescoutResponse));
+    }
     return Response.json(
-      { error: "Failed to get download URL" },
+      { error: error.message || "Failed to get download URL" },
       { status: 502 }
     );
   }
