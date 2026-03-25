@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const category = searchParams.get("category");
   const countries = searchParams.get("countries");
+  const emailOnly = searchParams.get("email") === "true";
+  const phoneOnly = searchParams.get("phone") === "true";
 
   if (!category || !countries) {
     return Response.json({ error: "category and countries are required" }, { status: 400 });
@@ -22,7 +24,9 @@ export async function GET(request: NextRequest) {
   }
 
   // V1: only category + countries — level2_locations uses internal codes we don't have yet
-  const url = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${countries}`;
+  let url = `${SPHERESCOUT_BASE_URL}/api/companies/?category=${categoryId}&countries=${countries}`;
+  if (emailOnly) url += "&email=true";
+  if (phoneOnly) url += "&phone=true";
 
   try {
     const res = await fetch(url, {

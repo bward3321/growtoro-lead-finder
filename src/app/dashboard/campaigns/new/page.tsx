@@ -193,6 +193,8 @@ export default function NewScrapePage() {
         category: String(selectedCategory.id),
         countries: gmCountry,
       });
+      if (gmEmailOnly) params.set("email", "true");
+      if (gmPhoneOnly) params.set("phone", "true");
 
       const res = await fetch(`/api/spherescout/count?${params}`);
       const data = await res.json();
@@ -537,7 +539,7 @@ export default function NewScrapePage() {
                 <div className="inline-flex rounded-lg border border-card-border overflow-hidden">
                   <button
                     type="button"
-                    onClick={() => setGmEmailOnly(false)}
+                    onClick={() => { setGmEmailOnly(false); setGmLeadCount(null); }}
                     className={`px-5 py-2.5 text-sm font-medium transition-colors ${
                       !gmEmailOnly
                         ? "bg-accent text-white"
@@ -548,7 +550,7 @@ export default function NewScrapePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setGmEmailOnly(true)}
+                    onClick={() => { setGmEmailOnly(true); setGmLeadCount(null); }}
                     className={`px-5 py-2.5 text-sm font-medium transition-colors ${
                       gmEmailOnly
                         ? "bg-accent text-white"
@@ -567,7 +569,7 @@ export default function NewScrapePage() {
                 <div className="inline-flex rounded-lg border border-card-border overflow-hidden">
                   <button
                     type="button"
-                    onClick={() => setGmPhoneOnly(false)}
+                    onClick={() => { setGmPhoneOnly(false); setGmLeadCount(null); }}
                     className={`px-5 py-2.5 text-sm font-medium transition-colors ${
                       !gmPhoneOnly
                         ? "bg-accent text-white"
@@ -578,7 +580,7 @@ export default function NewScrapePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setGmPhoneOnly(true)}
+                    onClick={() => { setGmPhoneOnly(true); setGmLeadCount(null); }}
                     className={`px-5 py-2.5 text-sm font-medium transition-colors ${
                       gmPhoneOnly
                         ? "bg-accent text-white"
