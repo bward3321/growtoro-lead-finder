@@ -921,7 +921,9 @@ export default function NewScrapePage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && b2bLocationInput.trim()) {
                     e.preventDefault();
-                    setB2bLocations((p) => [...p, b2bLocationInput.trim()]);
+                    // Title-case each word: "united states" → "United States"
+                    const titled = b2bLocationInput.trim().replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+                    setB2bLocations((p) => [...p, titled]);
                     setB2bLocationInput("");
                     setB2bLeadCount(null);
                   }

@@ -54,23 +54,25 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(requestBody),
     });
 
-    const result = await response.json();
+    const responseText = await response.text();
+    let result: any;
+    try { result = JSON.parse(responseText); } catch { result = responseText; }
+
     console.log("SEARCHLEADS RESPONSE STATUS:", response.status);
-    console.log("SEARCHLEADS TOTAL:", result.totalElements);
+    console.log("SEARCHLEADS RESPONSE BODY:", String(responseText).slice(0, 2000));
+
+    const debug = {
+      requestBodySent: requestBody,
+      searchLeadsStatus: response.status,
+      searchLeadsResponse: String(responseText).slice(0, 500),
+    };
 
     if (!response.ok) {
-      console.log("SEARCHLEADS ERROR:", JSON.stringify(result));
-      return NextResponse.json({
-        totalElements: 0,
-        error: result,
-        debug: { filtersUsed: requestBody.filters, frontendDataReceived: data },
-      });
+      return NextResponse.json({ totalElements: 0, error: result, debug });
     }
 
-    return NextResponse.json({
-      totalElements: result.totalElements || 0,
-      debug: { filtersUsed: requestBody.filters, frontendDataReceived: data },
-    });
+    const totalElements = result?.totalElements ?? result?.total_elements ?? result?.total ?? 0;
+    return NextResponse.json({ totalElements, debug });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Count route error:", error);
