@@ -122,6 +122,12 @@ export default function ScrapeDetailPage({
   async function handleExport() {
     setExporting(true);
     try {
+      // B2B contacts: direct download from our DB
+      if (scrape?.source === "searchleads") {
+        window.open(`/api/searchleads/download?campaignId=${scrape.id}`, "_blank");
+        setExporting(false);
+        return;
+      }
       if (scrape?.source === "spherescout" && scrape.spherescoutSearchId) {
         // Get download URL, then proxy through our route for custom filename
         const res = await fetch(
@@ -364,20 +370,22 @@ export default function ScrapeDetailPage({
         </div>
       )}
 
-      {/* SphereScout download section */}
-      {scrape.source === "spherescout" && scrape.status === "COMPLETED" && (
+      {/* Download section (SphereScout + SearchLeads) */}
+      {(scrape.source === "spherescout" || scrape.source === "searchleads") && scrape.status === "COMPLETED" && (
         <div className="p-6 bg-card border border-card-border rounded-xl">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-white">Download Leads</h2>
               <p className="text-sm text-gray-300 mt-1">
-                {scrape.leadsFound.toLocaleString()} leads available as CSV
+                {scrape.leadsFound.toLocaleString()} {scrape.source === "searchleads" ? "contacts" : "leads"} available as CSV
               </p>
             </div>
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="px-6 py-3 text-base bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50"
+              className={`px-6 py-3 text-base text-white rounded-lg transition-colors disabled:opacity-50 ${
+                scrape.source === "searchleads" ? "bg-indigo-600 hover:bg-indigo-500" : "bg-accent hover:bg-accent/90"
+              }`}
             >
               {exporting ? "Preparing..." : "Download CSV"}
             </button>

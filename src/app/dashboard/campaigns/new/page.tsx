@@ -10,6 +10,7 @@ import {
   LinkedInLogo,
   TikTokLogo,
   GoogleMapsLogo,
+  B2BContactsLogo,
 } from "@/components/PlatformLogos";
 
 const PLATFORMS: { id: string; name: string; Logo: ComponentType<{ className?: string }> }[] = [
@@ -20,6 +21,7 @@ const PLATFORMS: { id: string; name: string; Logo: ComponentType<{ className?: s
   { id: "linkedin", name: "LinkedIn", Logo: LinkedInLogo },
   { id: "tiktok", name: "TikTok", Logo: TikTokLogo },
   { id: "googlemaps", name: "Google Maps", Logo: GoogleMapsLogo },
+  { id: "b2bcontacts", name: "B2B Contacts", Logo: B2BContactsLogo },
 ];
 
 const PLATFORM_METHODS: Record<
@@ -93,6 +95,37 @@ const US_STATES = [
   { id: 66, code: "WY", name: "Wyoming" },
 ];
 
+const B2B_INDUSTRIES = [
+  "software development", "technology, information and internet", "financial services",
+  "marketing", "advertising", "real estate", "construction", "health care",
+  "hospitals and health care", "manufacturing", "retail", "e-commerce", "consulting",
+  "business consulting and services", "insurance", "banking", "education",
+  "staffing and recruiting", "food and beverage", "automotive", "hospitality",
+  "telecommunications", "transportation", "logistics", "energy", "legal services",
+  "accounting", "architecture", "biotechnology", "pharmaceutical", "entertainment",
+  "media production", "design services", "professional services", "non-profit organizations",
+  "government administration", "fitness", "wellness and fitness services", "restaurants",
+  "human resources", "events services", "sports", "music", "photography", "cosmetics",
+  "fashion", "consumer goods", "agriculture", "mining", "utilities", "aerospace",
+  "venture capital", "investment management", "saas", "artificial intelligence (ai)",
+  "machine learning", "cyber security", "cloud computing", "mobile apps", "analytics",
+  "digital marketing", "seo", "social media", "content marketing", "sales", "recruiting",
+  "project management", "property management", "interior design", "environmental services",
+  "renewable energy", "solar", "fintech", "blockchain", "cryptocurrency", "robotics",
+  "gaming", "video games", "film", "television", "publishing", "journalism",
+];
+
+const B2B_SENIORITY = [
+  { value: "owner", label: "Owner" },
+  { value: "founder", label: "Founder" },
+  { value: "c_suite", label: "C-Suite" },
+  { value: "vp", label: "VP" },
+  { value: "director", label: "Director" },
+  { value: "manager", label: "Manager" },
+  { value: "senior", label: "Senior" },
+  { value: "entry", label: "Entry" },
+];
+
 interface Category {
   id: number;
   name: string;
@@ -131,6 +164,22 @@ export default function NewScrapePage() {
   const [gmCountLoading, setGmCountLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // B2B Contacts specific state
+  const [b2bJobTitles, setB2bJobTitles] = useState<string[]>([]);
+  const [b2bJobTitleInput, setB2bJobTitleInput] = useState("");
+  const [b2bIndustries, setB2bIndustries] = useState<string[]>([]);
+  const [b2bIndustrySearch, setB2bIndustrySearch] = useState("");
+  const [b2bLocations, setB2bLocations] = useState<string[]>([]);
+  const [b2bLocationInput, setB2bLocationInput] = useState("");
+  const [b2bSeniority, setB2bSeniority] = useState<string[]>([]);
+  const [b2bTechnologies, setB2bTechnologies] = useState<string[]>([]);
+  const [b2bTechInput, setB2bTechInput] = useState("");
+  const [b2bKeyword, setB2bKeyword] = useState("");
+  const [b2bEmpMin, setB2bEmpMin] = useState("");
+  const [b2bEmpMax, setB2bEmpMax] = useState("");
+  const [b2bLeadCount, setB2bLeadCount] = useState<number | null>(null);
+  const [b2bCountLoading, setB2bCountLoading] = useState(false);
 
   // Fetch categories when Google Maps is selected
   useEffect(() => {
@@ -177,7 +226,13 @@ export default function NewScrapePage() {
     setGmPhoneOnly(false);
     setGmLeadCount(null);
     setError("");
-    if (id === "googlemaps") {
+    // Reset B2B state
+    setB2bJobTitles([]); setB2bJobTitleInput(""); setB2bIndustries([]);
+    setB2bIndustrySearch(""); setB2bLocations([]); setB2bLocationInput("");
+    setB2bSeniority([]); setB2bTechnologies([]); setB2bTechInput("");
+    setB2bKeyword(""); setB2bEmpMin(""); setB2bEmpMax(""); setB2bLeadCount(null);
+
+    if (id === "googlemaps" || id === "b2bcontacts") {
       // Skip method selection, go straight to configure
       setStep(3);
     } else {
@@ -254,6 +309,75 @@ export default function NewScrapePage() {
     }
   }
 
+  function getB2bFilters() {
+    const filters: Record<string, unknown> = {};
+    if (b2bJobTitles.length) filters.jobTitles = b2bJobTitles;
+    if (b2bIndustries.length) filters.industries = b2bIndustries;
+    if (b2bLocations.length) filters.locations = b2bLocations;
+    if (b2bSeniority.length) filters.seniority = b2bSeniority;
+    if (b2bTechnologies.length) filters.technologies = b2bTechnologies;
+    if (b2bEmpMin) filters.employeeSizeMin = parseInt(b2bEmpMin, 10);
+    if (b2bEmpMax) filters.employeeSizeMax = parseInt(b2bEmpMax, 10);
+    if (b2bKeyword) filters.keyword = b2bKeyword;
+    return filters;
+  }
+
+  const b2bHasFilters = b2bJobTitles.length > 0 || b2bIndustries.length > 0 || b2bLocations.length > 0
+    || b2bSeniority.length > 0 || b2bTechnologies.length > 0 || b2bKeyword.length > 0
+    || b2bEmpMin.length > 0 || b2bEmpMax.length > 0;
+
+  async function handleB2bCheckAvailability() {
+    setB2bCountLoading(true);
+    setB2bLeadCount(null);
+    setError("");
+    try {
+      const res = await fetch("/api/searchleads/count", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filters: getB2bFilters() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to check availability");
+        return;
+      }
+      setB2bLeadCount(data.totalElements ?? 0);
+    } catch {
+      setError("Failed to check availability");
+    } finally {
+      setB2bCountLoading(false);
+    }
+  }
+
+  async function handleB2bExport() {
+    if (b2bLeadCount === null || b2bLeadCount === 0) return;
+    setExportLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/searchleads/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filters: getB2bFilters(),
+          desiredCount: b2bLeadCount,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Export failed");
+        return;
+      }
+      const count = data.leadCount || 0;
+      router.push(
+        `/dashboard/campaigns/${data.campaign.id}?success=${encodeURIComponent(`Export complete! ${count.toLocaleString()} B2B contacts ready to download.`)}`
+      );
+    } catch (err: any) {
+      setError(err?.message || "Export failed");
+    } finally {
+      setExportLoading(false);
+    }
+  }
+
   async function launchScrape() {
     if (!method) return;
     setError("");
@@ -296,10 +420,12 @@ export default function NewScrapePage() {
   }
 
   const isGoogleMaps = platform === "googlemaps";
-  const stepLabels = isGoogleMaps
+  const isB2B = platform === "b2bcontacts";
+  const skipMethodStep = isGoogleMaps || isB2B;
+  const stepLabels = skipMethodStep
     ? { 1: "Platform", 2: "Platform", 3: "Configure" }
     : { 1: "Platform", 2: "Method", 3: "Configure" };
-  const totalSteps = isGoogleMaps ? [1, 3] : [1, 2, 3];
+  const totalSteps = skipMethodStep ? [1, 3] : [1, 2, 3];
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -350,7 +476,7 @@ export default function NewScrapePage() {
       )}
 
       {/* Step 2: Extraction Method (not shown for Google Maps) */}
-      {step === 2 && platform && !isGoogleMaps && (
+      {step === 2 && platform && !skipMethodStep && (
         <div className="space-y-4">
           <button
             onClick={() => setStep(1)}
@@ -666,8 +792,292 @@ export default function NewScrapePage() {
         </div>
       )}
 
+      {/* Step 3: Configure — B2B Contacts */}
+      {step === 3 && isB2B && (
+        <div className="space-y-6">
+          <button
+            onClick={() => setStep(1)}
+            className="text-base text-gray-300 hover:text-white transition-colors"
+          >
+            &larr; Back to platforms
+          </button>
+
+          {error && (
+            <div className="p-4 text-base text-danger bg-danger/10 border border-danger/20 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-5 bg-card border border-card-border rounded-xl p-8">
+            {/* Job Title */}
+            <div>
+              <label className="block text-base font-medium text-white mb-2">
+                Job Title
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {b2bJobTitles.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 rounded-full">
+                    {t}
+                    <button onClick={() => { setB2bJobTitles((p) => p.filter((x) => x !== t)); setB2bLeadCount(null); }} className="hover:text-white">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={b2bJobTitleInput}
+                onChange={(e) => setB2bJobTitleInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && b2bJobTitleInput.trim()) {
+                    e.preventDefault();
+                    setB2bJobTitles((p) => [...p, b2bJobTitleInput.trim()]);
+                    setB2bJobTitleInput("");
+                    setB2bLeadCount(null);
+                  }
+                }}
+                placeholder="Type a title (e.g. CEO, Marketing Director) and press Enter"
+                className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            </div>
+
+            {/* Industry */}
+            <div>
+              <label className="block text-base font-medium text-white mb-2">
+                Industry
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {b2bIndustries.map((ind) => (
+                  <span key={ind} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 rounded-full capitalize">
+                    {ind}
+                    <button onClick={() => { setB2bIndustries((p) => p.filter((x) => x !== ind)); setB2bLeadCount(null); }} className="hover:text-white">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={b2bIndustrySearch}
+                  onChange={(e) => setB2bIndustrySearch(e.target.value)}
+                  placeholder="Search industries (e.g. SaaS, Real Estate, Marketing)"
+                  className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+                {b2bIndustrySearch && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border border-card-border rounded-lg max-h-60 overflow-y-auto shadow-xl">
+                    {B2B_INDUSTRIES
+                      .filter((ind) =>
+                        !b2bIndustries.includes(ind) &&
+                        ind.toLowerCase().includes(b2bIndustrySearch.toLowerCase())
+                      )
+                      .slice(0, 15)
+                      .map((ind) => (
+                        <button
+                          key={ind}
+                          onClick={() => {
+                            setB2bIndustries((p) => [...p, ind]);
+                            setB2bIndustrySearch("");
+                            setB2bLeadCount(null);
+                          }}
+                          className="w-full text-left px-5 py-3 text-base text-white hover:bg-indigo-500/10 transition-colors border-b border-card-border last:border-0 capitalize"
+                        >
+                          {ind}
+                        </button>
+                      ))}
+                    {B2B_INDUSTRIES.filter((ind) =>
+                      !b2bIndustries.includes(ind) &&
+                      ind.toLowerCase().includes(b2bIndustrySearch.toLowerCase())
+                    ).length === 0 && (
+                      <div className="px-5 py-3 text-sm text-gray-400">No industries found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="block text-base font-medium text-white mb-2">
+                Location
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {b2bLocations.map((loc) => (
+                  <span key={loc} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 rounded-full">
+                    {loc}
+                    <button onClick={() => { setB2bLocations((p) => p.filter((x) => x !== loc)); setB2bLeadCount(null); }} className="hover:text-white">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={b2bLocationInput}
+                onChange={(e) => setB2bLocationInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && b2bLocationInput.trim()) {
+                    e.preventDefault();
+                    setB2bLocations((p) => [...p, b2bLocationInput.trim()]);
+                    setB2bLocationInput("");
+                    setB2bLeadCount(null);
+                  }
+                }}
+                placeholder="Type a location (e.g. United States, New York) and press Enter"
+                className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            </div>
+
+            {/* Company Size */}
+            <div>
+              <label className="block text-base font-medium text-white mb-2">
+                Company Size <span className="text-gray-400 text-sm">(employees)</span>
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="number"
+                  value={b2bEmpMin}
+                  onChange={(e) => { setB2bEmpMin(e.target.value); setB2bLeadCount(null); }}
+                  placeholder="Min (e.g. 10)"
+                  className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+                <input
+                  type="number"
+                  value={b2bEmpMax}
+                  onChange={(e) => { setB2bEmpMax(e.target.value); setB2bLeadCount(null); }}
+                  placeholder="Max (e.g. 500)"
+                  className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+            </div>
+
+            {/* Seniority */}
+            <div>
+              <label className="block text-base font-medium text-white mb-2">
+                Seniority Level
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {B2B_SENIORITY.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => {
+                      setB2bSeniority((prev) =>
+                        prev.includes(s.value) ? prev.filter((x) => x !== s.value) : [...prev, s.value]
+                      );
+                      setB2bLeadCount(null);
+                    }}
+                    className={`px-4 py-2 text-sm font-medium rounded-full border transition-colors ${
+                      b2bSeniority.includes(s.value)
+                        ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                        : "bg-card text-gray-400 border-card-border hover:text-white hover:border-gray-500"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Technologies */}
+            <div>
+              <label className="block text-base font-medium text-white mb-2">
+                Technologies <span className="text-gray-400 text-sm">(optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {b2bTechnologies.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 rounded-full">
+                    {t}
+                    <button onClick={() => { setB2bTechnologies((p) => p.filter((x) => x !== t)); setB2bLeadCount(null); }} className="hover:text-white">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={b2bTechInput}
+                onChange={(e) => setB2bTechInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && b2bTechInput.trim()) {
+                    e.preventDefault();
+                    setB2bTechnologies((p) => [...p, b2bTechInput.trim()]);
+                    setB2bTechInput("");
+                    setB2bLeadCount(null);
+                  }
+                }}
+                placeholder="Type a technology (e.g. Salesforce, Hubspot) and press Enter"
+                className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            </div>
+
+            {/* Keyword */}
+            <div>
+              <label className="block text-base font-medium text-white mb-2">
+                Keyword Search <span className="text-gray-400 text-sm">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={b2bKeyword}
+                onChange={(e) => { setB2bKeyword(e.target.value); setB2bLeadCount(null); }}
+                placeholder="Free-text keyword search across profiles"
+                className="w-full px-5 py-3 bg-background border border-card-border rounded-lg text-white text-base placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            </div>
+
+            {/* Check Availability */}
+            <button
+              onClick={handleB2bCheckAvailability}
+              disabled={!b2bHasFilters || b2bCountLoading}
+              className="w-full py-3.5 bg-card border border-indigo-500/30 text-indigo-400 text-base font-semibold rounded-lg hover:bg-indigo-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {b2bCountLoading ? "Checking..." : "Check Availability"}
+            </button>
+
+            {/* Lead Count Display */}
+            {b2bLeadCount !== null && b2bLeadCount > 0 && (
+              <div className="p-5 bg-success/5 border border-success/20 rounded-lg">
+                <p className="text-3xl font-bold text-white">
+                  {b2bLeadCount.toLocaleString()}{" "}
+                  <span className="text-lg font-medium text-success">contacts available</span>
+                </p>
+                <p className="text-sm text-gray-300 mt-2">
+                  Cost: <span className="text-indigo-400 font-semibold">{(b2bLeadCount * 2).toLocaleString()} credits</span> (2 credits per contact)
+                </p>
+              </div>
+            )}
+
+            {b2bLeadCount !== null && b2bLeadCount === 0 && (
+              <div className="p-5 bg-danger/5 border border-danger/20 rounded-lg">
+                <p className="text-base text-danger font-medium">No contacts found for these filters.</p>
+                <p className="text-sm text-gray-400 mt-1">Try broadening your search criteria.</p>
+              </div>
+            )}
+
+            {b2bLeadCount === null && !b2bCountLoading && (
+              <p className="text-sm text-gray-400">
+                Fill in at least one filter and click Check Availability to see matching contacts.
+              </p>
+            )}
+
+            {/* Export Button */}
+            <button
+              onClick={handleB2bExport}
+              disabled={!b2bHasFilters || exportLoading || b2bLeadCount === null || b2bLeadCount === 0}
+              className="w-full py-4 bg-indigo-600 text-white text-lg font-semibold rounded-lg hover:bg-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exportLoading
+                ? "Exporting..."
+                : b2bLeadCount && b2bLeadCount > 0
+                  ? `Export ${b2bLeadCount.toLocaleString()} Contacts (${(b2bLeadCount * 2).toLocaleString()} credits)`
+                  : "Export Contacts"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Step 3: Configure — Social Media */}
-      {step === 3 && method && !isGoogleMaps && (
+      {step === 3 && method && !skipMethodStep && (
         <div className="space-y-6">
           <button
             onClick={() => setStep(2)}

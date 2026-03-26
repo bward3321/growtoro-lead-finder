@@ -25,6 +25,7 @@ model Campaign {
   user                 User     @relation(fields: [userId], references: [id])
   scravioCampaignId    String?
   spherescoutSearchId  String?
+  searchleadsData      String?
   source               String   @default("scravio")
   name                 String
   platform             String

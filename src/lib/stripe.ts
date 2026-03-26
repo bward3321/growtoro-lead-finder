@@ -17,3 +17,10 @@ export const GOOGLE_MAPS_PACKS = [
   { id: "gm-pro", name: "Pro", price: 9900, credits: 10000, label: "$99" },
   { id: "gm-scale", name: "Scale", price: 19900, credits: 25000, label: "$199" },
 ] as const;
+
+export const B2B_PACKS = [
+  { id: "b2b-starter", name: "Starter", price: 4900, credits: 1000, label: "$49" },
+  { id: "b2b-growth", name: "Growth", price: 9900, credits: 3000, label: "$99" },
+  { id: "b2b-pro", name: "Pro", price: 19900, credits: 8000, label: "$199" },
+  { id: "b2b-scale", name: "Scale", price: 39900, credits: 20000, label: "$399" },
+] as const;

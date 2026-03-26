@@ -11,6 +11,7 @@ import {
   LinkedInLogo,
   TikTokLogo,
   GoogleMapsLogo,
+  B2BContactsLogo,
 } from "@/components/PlatformLogos";
 import type { ComponentType } from "react";
 
@@ -41,6 +42,7 @@ const PLATFORM_LOGOS: Record<string, ComponentType<{ className?: string }>> = {
   linkedin: LinkedInLogo,
   tiktok: TikTokLogo,
   googlemaps: GoogleMapsLogo,
+  b2bcontacts: B2BContactsLogo,
 };
 
 const METHOD_LABELS: Record<string, string> = {
@@ -60,11 +62,14 @@ const METHOD_LABELS: Record<string, string> = {
   LINKEDIN_KEYWORD_SEARCH: "Keyword Search",
   TIKTOK_KEYWORD_SEARCH: "Keyword Search",
   GOOGLEMAPS_BUSINESS_SEARCH: "Business Search",
+  B2B_CONTACT_SEARCH: "People Search",
 };
 
 function getSearchTarget(scrape: Scrape): string {
   try {
     const config = JSON.parse(scrape.config);
+    if (config.jobTitles?.length) return config.jobTitles.join(", ");
+    if (config.industries?.length) return config.industries.join(", ");
     return config.categoryName || config.keywords || config.hashtag || config.username || config.post_url || "-";
   } catch {
     return "-";
@@ -81,6 +86,11 @@ function DownloadButton({ scrape }: { scrape: Scrape }) {
     setLoading(true);
     setError("");
     try {
+      // B2B contacts: direct download from our DB
+      if (scrape.source === "searchleads") {
+        window.open(`/api/searchleads/download?campaignId=${scrape.id}`, "_blank");
+        return;
+      }
       let downloadUrl: string | undefined;
       if (scrape.source === "spherescout" && scrape.spherescoutSearchId) {
         const res = await fetch(

@@ -74,6 +74,19 @@ export function GoogleMapsLogo({ className = "w-10 h-10" }: { className?: string
   );
 }
 
+export function B2BContactsLogo({ className = "w-10 h-10" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="48" height="48" rx="12" fill="#4F46E5" />
+      {/* Briefcase */}
+      <rect x="12" y="20" width="24" height="16" rx="2.5" stroke="white" strokeWidth="2" fill="none" />
+      <path d="M19 20v-3a2 2 0 012-2h6a2 2 0 012 2v3" stroke="white" strokeWidth="2" fill="none" />
+      <path d="M12 26h24" stroke="white" strokeWidth="2" />
+      <rect x="21" y="24" width="6" height="4" rx="1" fill="white" />
+    </svg>
+  );
+}
+
 export function TikTokLogo({ className = "w-10 h-10" }: { className?: string }) {
   // Classic TikTok "d"-shaped music note with cyan + pink shadow offsets
   const notePath = "M25.5 11h3.6c.3 1.6 1.1 3 2.3 3.9 1 .8 2.3 1.2 3.6 1.3v3.6c-1.8-.1-3.5-.7-4.9-1.7v7.8c0 5.2-4.2 7.6-7.4 7.6-4.3 0-7.7-3.2-7.7-7.2 0-4.3 3.8-7.5 7.7-7.1v3.7c-.4-.1-.8-.2-1.2-.2-2.1 0-3.5 1.5-3.5 3.4 0 2 1.6 3.5 3.6 3.5 2.1 0 3.5-1.4 3.5-3.5V11z";
