@@ -144,8 +144,10 @@ function buildRequestBody(filters: SearchLeadsFilters, page: number, size: numbe
 export async function getCount(filters: SearchLeadsFilters): Promise<{ totalElements: number }> {
   const body = buildRequestBody(filters, 0, 1);
   const data = await fetchWithRetry("/people-search", body);
+  // SearchLeads nests data under data.results
+  const inner = data?.results || data;
   return {
-    totalElements: data.totalElements ?? data.total_elements ?? data.total ?? 0,
+    totalElements: inner?.totalElements ?? inner?.total_elements ?? data?.totalElements ?? 0,
   };
 }
 
@@ -197,7 +199,9 @@ export async function fetchContacts(
     const body = buildRequestBody(filters, page, size);
     const data = await fetchWithRetry("/people-search", body);
 
-    const results = data.content || data.results || data.data || [];
+    // SearchLeads nests content under data.results.content
+    const inner = data?.results || data;
+    const results = inner?.content || data?.content || data?.data || [];
     if (!Array.isArray(results) || results.length === 0) break;
 
     for (const raw of results) {
