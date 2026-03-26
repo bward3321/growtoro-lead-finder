@@ -166,27 +166,41 @@ export interface SearchLeadsContact {
 }
 
 function parseContact(item: any): SearchLeadsContact {
-  const profile = item?.profile || item || {};
-  const company = item?.company || {};
-  const positions = profile.profile_positions || profile.position_groups || [];
-  const currentPosition = positions[0] || {};
-  const currentCompany = currentPosition.company || {};
+  function str(val: unknown): string {
+    if (val == null) return "";
+    if (typeof val === "object") return "";
+    return String(val);
+  }
 
-  const firstName = profile.first_name || "";
-  const lastName = profile.last_name || "";
+  const profile = item?.profile || {};
+  const company = item?.company || {};
+  const link = item?.link || {};
+  const loc = item?.location || {};
+  const companyLink = company.link || {};
+  const companyStaff = company.staff || {};
+  const positionGroups = item?.position_groups || [];
+  const currentPosition = positionGroups[0] || {};
+  const currentCompanyFromPosition = currentPosition.company || {};
+
+  let location = "";
+  if (typeof loc === "string") {
+    location = loc;
+  } else {
+    location = str(loc.default) || [str(loc.city), str(loc.state), str(loc.country)].filter(Boolean).join(", ");
+  }
 
   return {
-    fullName: profile.full_name || [firstName, lastName].filter(Boolean).join(" ") || item?.name || "",
-    email: profile.work_email || profile.email || item?.email || "",
-    phone: (Array.isArray(profile.phone_numbers) ? profile.phone_numbers[0] : null) || profile.phone || item?.phone || "",
-    jobTitle: profile.title || profile.headline || currentPosition.title || item?.title || "",
-    company: currentCompany.name || profile.company_name || profile.position_company || company.name || item?.companyName || "",
-    industry: company.industry || profile.industry || "",
-    location: (typeof profile.location === "string" ? profile.location : profile.location?.default) || [profile.city, profile.state, profile.country].filter(Boolean).join(", ") || "",
-    linkedinUrl: profile.linkedin || profile.link?.linkedin || (item?.identifier ? `https://linkedin.com/in/${item.identifier}` : "") || "",
-    companyWebsite: company.domain || currentCompany.url || company.website || company.link?.website || "",
-    companySize: String(company.staff?.total || company.employees || ""),
-    seniority: profile.seniority || "",
+    fullName: str(profile.full_name) || [str(profile.first_name), str(profile.last_name)].filter(Boolean).join(" "),
+    email: str(profile.email) || str(item?.email),
+    phone: str(profile.phone) || str(item?.phone),
+    jobTitle: str(profile.title) || str(profile.headline),
+    company: str(currentCompanyFromPosition.name) || str(company.name) || str(company.summary),
+    industry: str(item?.industry) || (Array.isArray(company.industries) ? str(company.industries[0]) : ""),
+    location,
+    linkedinUrl: str(link.linkedin),
+    companyWebsite: str(companyLink.website) || str(company.domain),
+    companySize: str(companyStaff.total),
+    seniority: str(item?.seniority),
   };
 }
 

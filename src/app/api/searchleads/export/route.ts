@@ -65,7 +65,7 @@ async function fetchPage(filters: Record<string, unknown>, keyword: string, page
 }
 
 function extractContact(item: any): searchleads.SearchLeadsContact {
-  // Safely stringify any value — if it's an object, return empty string
+  // Safely stringify — returns "" for null, undefined, or any object/array
   function str(val: unknown): string {
     if (val == null) return "";
     if (typeof val === "object") return "";
@@ -74,34 +74,34 @@ function extractContact(item: any): searchleads.SearchLeadsContact {
 
   const profile = item?.profile || {};
   const company = item?.company || {};
-  const positions = profile.profile_positions || profile.position_groups || [];
-  const currentPosition = positions[0] || {};
-  const currentCompany = currentPosition.company || {};
+  const link = item?.link || {};
+  const loc = item?.location || {};
+  const companyLink = company.link || {};
+  const companyStaff = company.staff || {};
+  const positionGroups = item?.position_groups || [];
+  const currentPosition = positionGroups[0] || {};
+  const currentCompanyFromPosition = currentPosition.company || {};
 
-  const firstName = str(profile.first_name);
-  const lastName = str(profile.last_name);
-
+  // location is a top-level object with a "default" field
   let location = "";
-  if (typeof profile.location === "string") {
-    location = profile.location;
-  } else if (profile.location?.default) {
-    location = str(profile.location.default);
+  if (typeof loc === "string") {
+    location = loc;
   } else {
-    location = [str(profile.city), str(profile.state), str(profile.country)].filter(Boolean).join(", ");
+    location = str(loc.default) || [str(loc.city), str(loc.state), str(loc.country)].filter(Boolean).join(", ");
   }
 
   return {
-    fullName: str(profile.full_name) || [firstName, lastName].filter(Boolean).join(" ") || str(item?.name),
-    email: str(profile.work_email) || str(profile.email) || str(item?.email),
-    phone: str(Array.isArray(profile.phone_numbers) ? profile.phone_numbers[0] : null) || str(profile.phone) || str(item?.phone),
-    jobTitle: str(profile.title) || str(profile.headline) || str(currentPosition.title) || str(item?.title),
-    company: str(currentCompany.name) || str(profile.company_name) || str(profile.position_company) || str(company.name) || str(item?.companyName),
-    industry: str(company.industry) || str(profile.industry),
+    fullName: str(profile.full_name) || [str(profile.first_name), str(profile.last_name)].filter(Boolean).join(" "),
+    email: str(profile.email) || str(item?.email),
+    phone: str(profile.phone) || str(item?.phone),
+    jobTitle: str(profile.title) || str(profile.headline),
+    company: str(currentCompanyFromPosition.name) || str(company.name) || str(company.summary),
+    industry: str(item?.industry) || (Array.isArray(company.industries) ? str(company.industries[0]) : ""),
     location,
-    linkedinUrl: str(profile.linkedin) || str(profile.link?.linkedin) || (item?.identifier ? `https://linkedin.com/in/${item.identifier}` : ""),
-    companyWebsite: str(company.domain) || str(currentCompany.url) || str(company.website) || str(company.link?.website),
-    companySize: str(company.staff?.total || company.employees || ""),
-    seniority: str(profile.seniority),
+    linkedinUrl: str(link.linkedin),
+    companyWebsite: str(companyLink.website) || str(company.domain),
+    companySize: str(companyStaff.total),
+    seniority: str(item?.seniority),
   };
 }
 
