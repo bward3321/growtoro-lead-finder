@@ -77,12 +77,17 @@ export function GoogleMapsLogo({ className = "w-10 h-10" }: { className?: string
 export function B2BContactsLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="12" fill="#4F46E5" />
-      {/* Briefcase */}
-      <rect x="12" y="20" width="24" height="16" rx="2.5" stroke="white" strokeWidth="2" fill="none" />
-      <path d="M19 20v-3a2 2 0 012-2h6a2 2 0 012 2v3" stroke="white" strokeWidth="2" fill="none" />
-      <path d="M12 26h24" stroke="white" strokeWidth="2" />
-      <rect x="21" y="24" width="6" height="4" rx="1" fill="white" />
+      <defs>
+        <linearGradient id="b2b-bg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#6366F1" />
+          <stop offset="100%" stopColor="#4F46E5" />
+        </linearGradient>
+      </defs>
+      <rect width="48" height="48" rx="12" fill="url(#b2b-bg)" />
+      {/* Globe */}
+      <circle cx="24" cy="24" r="10" stroke="white" strokeWidth="1.5" fill="none" />
+      <path d="M14 24h20" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M24 14a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   );
 }
