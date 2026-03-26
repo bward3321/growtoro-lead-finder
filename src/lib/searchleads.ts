@@ -4,7 +4,9 @@ const API_KEY = process.env.SEARCHLEADS_API_KEY!;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function searchleadsFetch(path: string, body: unknown): Promise<any> {
   const url = `${SEARCHLEADS_BASE_URL}${path}`;
-  console.log(`[SearchLeads] POST ${url}`, JSON.stringify(body).slice(0, 500));
+  console.log(`[SearchLeads] POST ${url}`);
+  console.log(`[SearchLeads] Headers: x-searchleads-api-key=${API_KEY ? API_KEY.slice(0, 8) + "..." : "MISSING"}`);
+  console.log(`[SearchLeads] Body:`, JSON.stringify(body));
 
   const res = await fetch(url, {
     method: "POST",
@@ -26,7 +28,7 @@ async function searchleadsFetch(path: string, body: unknown): Promise<any> {
     data = text;
   }
 
-  console.log(`[SearchLeads] POST ${url} → ${res.status}`);
+  console.log(`[SearchLeads] POST ${url} → ${res.status}`, JSON.stringify(data).slice(0, 1000));
 
   if (!res.ok) {
     const parsed = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
@@ -97,7 +99,8 @@ function buildRequestBody(filters: SearchLeadsFilters, page: number, size: numbe
     filterObj["contact.experience.latest.title"] = filters.jobTitles;
   }
   if (filters.industries?.length) {
-    filterObj["account.industry"] = filters.industries;
+    // SearchLeads requires lowercase industry values
+    filterObj["account.industry"] = filters.industries.map((i) => i.toLowerCase());
   }
   if (filters.locations?.length) {
     filterObj["contact.location"] = filters.locations;

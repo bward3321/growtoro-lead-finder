@@ -7,6 +7,7 @@ import {
   LinkedInLogo,
   TikTokLogo,
   GoogleMapsLogo,
+  B2BContactsLogo,
 } from "@/components/PlatformLogos";
 
 const platforms = [
@@ -17,6 +18,7 @@ const platforms = [
   { name: "LinkedIn", Logo: LinkedInLogo, hoverBorder: "hover:border-[#0A66C2]/50", hoverGlow: "hover:shadow-[0_0_25px_-5px_rgba(10,102,194,0.3)]" },
   { name: "TikTok", Logo: TikTokLogo, hoverBorder: "hover:border-[#FE2C55]/40", hoverGlow: "hover:shadow-[0_0_25px_-5px_rgba(254,44,85,0.25)]" },
   { name: "Google Maps", Logo: GoogleMapsLogo, hoverBorder: "hover:border-[#34A853]/50", hoverGlow: "hover:shadow-[0_0_25px_-5px_rgba(52,168,83,0.3)]" },
+  { name: "B2B Contacts", Logo: B2BContactsLogo, hoverBorder: "hover:border-[#6366F1]/50", hoverGlow: "hover:shadow-[0_0_25px_-5px_rgba(99,102,241,0.3)]" },
 ];
 
 export default function Home() {
@@ -44,15 +46,14 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-8 py-16">
         <div className="max-w-5xl text-center space-y-10">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight whitespace-nowrap">
-            Extract{" "}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
+            Find leads from{" "}
             <span className="gradient-shimmer">
-              verified emails
-            </span>{" "}
-            from social media
+              social media, maps &amp; B2B databases
+            </span>
           </h1>
-          <p className="text-lg text-white whitespace-nowrap">
-            Scrape emails, profiles, and contact data from social media and Google Maps. Pay per lead, no subscriptions.
+          <p className="text-lg text-white">
+            Extract verified emails, B2B contacts, and business data from 8 platforms. Pay per lead, no subscriptions.
           </p>
           <div className="flex flex-col items-center gap-4">
             <Link
@@ -66,7 +67,7 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 pt-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-4 max-w-5xl mx-auto">
             {platforms.map((p) => (
               <div
                 key={p.name}
