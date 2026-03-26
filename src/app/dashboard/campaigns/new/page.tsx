@@ -331,14 +331,17 @@ export default function NewScrapePage() {
     setB2bLeadCount(null);
     setError("");
     try {
+      const filtersPayload = { filters: getB2bFilters() };
+      console.log("[B2B] Sending to count route:", JSON.stringify(filtersPayload));
       const res = await fetch("/api/searchleads/count", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filters: getB2bFilters() }),
+        body: JSON.stringify(filtersPayload),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to check availability");
+      console.log("[B2B] Count route response:", JSON.stringify(data));
+      if (data.error && !data.totalElements) {
+        setError(typeof data.error === "string" ? data.error : "Failed to check availability");
         return;
       }
       setB2bLeadCount(data.totalElements ?? 0);

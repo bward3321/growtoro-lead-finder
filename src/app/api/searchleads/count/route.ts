@@ -1,98 +1,79 @@
-import { NextRequest } from "next/server";
-import { getSession } from "@/lib/auth";
+export const dynamic = "force-dynamic";
 
-const SEARCHLEADS_BASE_URL = "https://pro.searchleads.co/functions/v1";
-const API_KEY = process.env.SEARCHLEADS_API_KEY!;
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
-  const body = await request.json();
-  console.log("[SearchLeads Count] Raw request body from frontend:", JSON.stringify(body));
-
-  const { filters } = body;
-  if (!filters || typeof filters !== "object") {
-    return Response.json({ error: "filters object is required" }, { status: 400 });
-  }
-
-  // Build SearchLeads filter object from scratch — only include non-empty values
-  const slFilters: Record<string, unknown> = {};
-
-  if (filters.jobTitles?.length) {
-    slFilters["contact.experience.latest.title"] = filters.jobTitles;
-  }
-  if (filters.industries?.length) {
-    slFilters["account.industry"] = filters.industries.map((i: string) => i.toLowerCase());
-  }
-  if (filters.locations?.length) {
-    slFilters["contact.location"] = filters.locations;
-  }
-  if (filters.seniority?.length) {
-    slFilters["contact.seniority"] = filters.seniority.map((s: string) => s.toLowerCase());
-  }
-  if (filters.technologies?.length) {
-    slFilters["account.technology"] = filters.technologies;
-  }
-  if (filters.employeeSizeMin != null || filters.employeeSizeMax != null) {
-    const sizeFilter: Record<string, number> = {};
-    if (filters.employeeSizeMin != null && Number(filters.employeeSizeMin) > 0) {
-      sizeFilter.min = Math.floor(Number(filters.employeeSizeMin));
-    }
-    if (filters.employeeSizeMax != null && Number(filters.employeeSizeMax) > 0) {
-      sizeFilter.max = Math.floor(Number(filters.employeeSizeMax));
-    }
-    if (Object.keys(sizeFilter).length > 0) {
-      slFilters["account.employeeSize"] = sizeFilter;
-    }
-  }
-
-  const searchBody: Record<string, unknown> = { filters: slFilters, page: 0, size: 1 };
-
-  if (filters.keyword?.trim()) {
-    searchBody.textFilters = { "contact.keyword": filters.keyword.trim() };
-  }
-
-  console.log("[SearchLeads Count] Sending to SearchLeads:", JSON.stringify(searchBody));
-
+export async function POST(req: NextRequest) {
   try {
-    const res = await fetch(`${SEARCHLEADS_BASE_URL}/people-search`, {
+    const data = await req.json();
+    console.log("RAW FRONTEND DATA:", JSON.stringify(data));
+
+    // The frontend sends { filters: { jobTitles, industries, ... } }
+    // Unwrap the filters object, or fall back to top-level fields
+    const src = data.filters || data;
+
+    // Build SearchLeads filters from whatever field names we find
+    const filters: Record<string, unknown> = {};
+
+    const titles = src.jobTitles || src.titles || src["contact.experience.latest.title"] || [];
+    const industries = src.industries || src.industry || src["account.industry"] || [];
+    const locations = src.locations || src.location || src["contact.location"] || [];
+    const seniority = src.seniority || src.seniorityLevel || src["contact.seniority"] || [];
+    const technologies = src.technologies || src.technology || src["account.technology"] || [];
+    const employeeMin = src.employeeSizeMin ?? src.employeeMin ?? src["account.employeeSize"]?.min ?? null;
+    const employeeMax = src.employeeSizeMax ?? src.employeeMax ?? src["account.employeeSize"]?.max ?? null;
+    const keyword = src.keyword || src.keywords || "";
+
+    if (Array.isArray(titles) && titles.length > 0) filters["contact.experience.latest.title"] = titles;
+    if (Array.isArray(industries) && industries.length > 0) filters["account.industry"] = industries.map((i: string) => i.toLowerCase());
+    if (Array.isArray(locations) && locations.length > 0) filters["contact.location"] = locations;
+    if (Array.isArray(seniority) && seniority.length > 0) filters["contact.seniority"] = seniority.map((s: string) => s.toLowerCase());
+    if (Array.isArray(technologies) && technologies.length > 0) filters["account.technology"] = technologies;
+    if (employeeMin !== null || employeeMax !== null) {
+      const size: Record<string, number> = {};
+      if (employeeMin !== null && Number(employeeMin) > 0) size.min = Number(employeeMin);
+      if (employeeMax !== null && Number(employeeMax) > 0) size.max = Number(employeeMax);
+      if (Object.keys(size).length > 0) filters["account.employeeSize"] = size;
+    }
+
+    const requestBody: Record<string, unknown> = { filters, page: 0, size: 1 };
+    if (keyword && String(keyword).trim()) {
+      requestBody.textFilters = { "contact.keyword": String(keyword).trim() };
+    }
+
+    console.log("SEARCHLEADS REQUEST BODY:", JSON.stringify(requestBody));
+
+    const response = await fetch("https://pro.searchleads.co/functions/v1/people-search", {
       method: "POST",
       cache: "no-store",
       headers: {
-        "x-searchleads-api-key": API_KEY,
+        "x-searchleads-api-key": process.env.SEARCHLEADS_API_KEY || "",
         "Content-Type": "application/json",
         Accept: "application/json",
         "User-Agent": "GrowtorLeadFinder/1.0",
       },
-      body: JSON.stringify(searchBody),
+      body: JSON.stringify(requestBody),
     });
 
-    const text = await res.text();
-    let data: any;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
+    const result = await response.json();
+    console.log("SEARCHLEADS RESPONSE STATUS:", response.status);
+    console.log("SEARCHLEADS TOTAL:", result.totalElements);
+
+    if (!response.ok) {
+      console.log("SEARCHLEADS ERROR:", JSON.stringify(result));
+      return NextResponse.json({
+        totalElements: 0,
+        error: result,
+        debug: { filtersUsed: requestBody.filters, frontendDataReceived: data },
+      });
     }
 
-    console.log("[SearchLeads Count] Response status:", res.status);
-    console.log("[SearchLeads Count] Response body:", JSON.stringify(data).slice(0, 2000));
-
-    if (!res.ok) {
-      const msg = data?.message || data?.error || data?.detail || text;
-      return Response.json({ error: `SearchLeads error ${res.status}: ${msg}` }, { status: 502 });
-    }
-
-    const totalElements = data.totalElements ?? data.total_elements ?? data.total ?? 0;
-    console.log("[SearchLeads Count] totalElements:", totalElements);
-
-    return Response.json({ totalElements });
-  } catch (error: any) {
-    console.error("[SearchLeads Count] Fetch error:", error.message);
-    return Response.json(
-      { error: error.message || "Failed to check availability" },
-      { status: 502 }
-    );
+    return NextResponse.json({
+      totalElements: result.totalElements || 0,
+      debug: { filtersUsed: requestBody.filters, frontendDataReceived: data },
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Count route error:", error);
+    return NextResponse.json({ totalElements: 0, error: msg });
   }
 }
