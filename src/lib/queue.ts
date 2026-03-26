@@ -27,7 +27,7 @@ export async function processQueue() {
 
   // 2. Get oldest queued scrapes up to available slots
   const queued = await prisma.campaign.findMany({
-    where: { status: "QUEUED" },
+    where: { status: "QUEUED", scravioCampaignId: null },
     orderBy: { createdAt: "asc" },
     take: slotsAvailable,
   });
@@ -111,7 +111,7 @@ export async function syncCampaignStatus(campaignId: string) {
     where: { id: campaignId },
   });
 
-  if (!campaign?.scravioCampaignId || campaign.status === "QUEUED") {
+  if (!campaign?.scravioCampaignId) {
     return campaign;
   }
 
@@ -135,8 +135,8 @@ export async function syncCampaignStatus(campaignId: string) {
       error: "FAILED",
       stopped: "STOPPED",
       paused: "STOPPED",
-      queued: "RUNNING", // Scravio queued means it's accepted, treat as running on our end
-      pending: "RUNNING",
+      queued: "QUEUED",
+      pending: "QUEUED",
     };
     const status = STATUS_MAP[rawStatus.toLowerCase()] || rawStatus.toUpperCase();
 
@@ -220,7 +220,7 @@ export async function syncCampaignStatus(campaignId: string) {
 export async function syncAllActiveCampaigns() {
   const active = await prisma.campaign.findMany({
     where: {
-      status: { in: ["RUNNING", "PENDING", "PROCESSING"] },
+      status: { in: ["RUNNING", "PENDING", "PROCESSING", "QUEUED"] },
       scravioCampaignId: { not: null },
       source: { not: "spherescout" },
     },

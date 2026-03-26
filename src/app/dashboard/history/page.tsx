@@ -366,7 +366,7 @@ export default function HistoryPage() {
                       </td>
                       <td className="px-5 py-4">
                         {scrape.status === "QUEUED" ? (
-                          <span className="text-sm text-orange-400/70">Waiting...</span>
+                          <span className="text-sm text-orange-400/70">Queued — will begin shortly</span>
                         ) : scrape.status === "PROCESSING" ? (
                           <span className="text-sm text-purple-400/70">Preparing export...</span>
                         ) : scrape.status === "RUNNING" ? (

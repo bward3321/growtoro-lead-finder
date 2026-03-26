@@ -234,7 +234,9 @@ export default function ScrapeDetailPage({
   const isSphereScout = scrape.source === "spherescout";
   const progress = isSphereScout
     ? ssProgress
-    : scrape.targetCount > 0
+    : scrape.status === "QUEUED"
+      ? 5
+      : scrape.targetCount > 0
       ? Math.min(100, Math.round((scrape.leadsFound / scrape.targetCount) * 100))
       : 0;
 
@@ -352,6 +354,15 @@ export default function ScrapeDetailPage({
           />
         </div>
       </div>
+
+      {/* Queued message */}
+      {scrape.status === "QUEUED" && (
+        <div className="px-5 py-3 bg-orange-400/10 border border-orange-400/30 rounded-lg">
+          <p className="text-orange-400 text-base">
+            Your scrape is queued and will begin processing shortly.
+          </p>
+        </div>
+      )}
 
       {/* SphereScout download section */}
       {scrape.source === "spherescout" && scrape.status === "COMPLETED" && (
