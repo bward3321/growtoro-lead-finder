@@ -96,11 +96,11 @@ export default function ScrapeDetailPage({
     fetchScrape();
   }, [fetchScrape]);
 
-  // Auto-poll: 5s for SphereScout processing, 15s for Scravio
+  // Auto-poll: 5s for SphereScout processing, 10s for Scravio
   useEffect(() => {
     if (!scrape || ["COMPLETED", "FAILED", "STOPPED"].includes(scrape.status)) return;
 
-    const interval = scrape.source === "spherescout" ? 5000 : 15000;
+    const interval = scrape.source === "spherescout" ? 5000 : 10000;
     const timer = setInterval(() => {
       pollCountRef.current++;
       fetchScrape(true);

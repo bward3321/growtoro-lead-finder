@@ -260,16 +260,18 @@ export default function HistoryPage() {
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
 
-    const interval = setInterval(() => {
-      const hasActive = scrapes.some((s) =>
-        ["RUNNING", "PENDING", "QUEUED", "PROCESSING"].includes(s.status)
-      );
-      if (hasActive) fetchData();
-    }, 15000);
+  // Poll every 15 seconds if there are active scrapes
+  useEffect(() => {
+    const hasActive = scrapes.some((s) =>
+      ["RUNNING", "PENDING", "QUEUED", "PROCESSING"].includes(s.status)
+    );
+    if (!hasActive) return;
 
-    return () => clearInterval(interval);
-  }, [fetchData, scrapes]);
+    const timer = setInterval(() => fetchData(), 15000);
+    return () => clearInterval(timer);
+  }, [scrapes, fetchData]);
 
   const totalPages = Math.ceil(scrapes.length / PAGE_SIZE);
   const paginated = scrapes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

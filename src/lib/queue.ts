@@ -117,10 +117,12 @@ export async function syncCampaignStatus(campaignId: string) {
 
   try {
     const scravioData = await scravio.getCampaign(campaign.scravioCampaignId);
-    const obj = scravioData.campaign || scravioData;
+    const obj = scravioData.campaign || scravioData.data || scravioData;
     const rawStatus = obj.status || "";
     const leadsFound =
       obj.emailScanCount || obj.emails_found || obj.leads_count || obj.leadsFound || 0;
+
+    console.log(`[Sync] campaign=${campaignId} scravioId=${campaign.scravioCampaignId} rawStatus="${rawStatus}" leadsFound=${leadsFound} progress=${obj.progressPercentage ?? obj.progress ?? "N/A"} keys=${Object.keys(obj).join(",")}`);
 
     // Map Scravio statuses to our statuses
     const STATUS_MAP: Record<string, string> = {
@@ -218,10 +220,13 @@ export async function syncCampaignStatus(campaignId: string) {
 export async function syncAllActiveCampaigns() {
   const active = await prisma.campaign.findMany({
     where: {
-      status: { in: ["RUNNING", "PENDING"] },
+      status: { in: ["RUNNING", "PENDING", "PROCESSING"] },
       scravioCampaignId: { not: null },
+      source: { not: "spherescout" },
     },
   });
+
+  console.log(`[SyncAll] Found ${active.length} active Scravio campaigns to sync`);
 
   let synced = 0;
   let completed = 0;

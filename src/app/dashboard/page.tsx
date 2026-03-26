@@ -288,19 +288,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
 
-    // Poll every 15 seconds if there are active scrapes
-    const interval = setInterval(() => {
-      const hasActive = scrapes.some((s) =>
-        ["RUNNING", "PENDING", "QUEUED", "PROCESSING"].includes(s.status)
-      );
-      if (hasActive || scrapes.length === 0) {
-        fetchData();
-      }
-    }, 15000);
+  // Poll every 10 seconds if there are active scrapes
+  useEffect(() => {
+    const hasActive = scrapes.some((s) =>
+      ["RUNNING", "PENDING", "QUEUED", "PROCESSING"].includes(s.status)
+    );
+    if (!hasActive) return;
 
-    return () => clearInterval(interval);
-  }, [fetchData, scrapes]);
+    const timer = setInterval(() => fetchData(), 10000);
+    return () => clearInterval(timer);
+  }, [scrapes, fetchData]);
 
   if (loading) {
     return (
