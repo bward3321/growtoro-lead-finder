@@ -1,15 +1,18 @@
 import { getSession } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const session = await getSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const API_KEY = process.env.SEARCHLEADS_API_KEY;
   const url = "https://pro.searchleads.co/functions/v1/people-search";
+
+  // Simplest possible search — just CEOs, no other filters
   const body = {
     filters: {
       "contact.experience.latest.title": ["CEO"],
-      "account.industry": ["software development"],
     },
     page: 0,
     size: 1,
@@ -45,14 +48,17 @@ export async function GET() {
 
     return Response.json({
       status: res.status,
-      headers: Object.fromEntries(res.headers.entries()),
       body: data,
       requestBody: body,
       apiKeyPresent: !!API_KEY,
-      apiKeyLength: API_KEY?.length || 0,
+      apiKeyFirstChars: API_KEY ? API_KEY.slice(0, 8) : null,
     });
   } catch (error: any) {
-    console.error("[TestSearchLeads] Error:", error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error("[TestSearchLeads] Fetch error:", error.message);
+    return Response.json({
+      error: error.message,
+      apiKeyPresent: !!API_KEY,
+      apiKeyFirstChars: API_KEY ? API_KEY.slice(0, 8) : null,
+    }, { status: 500 });
   }
 }

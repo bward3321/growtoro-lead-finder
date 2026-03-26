@@ -93,35 +93,45 @@ export interface SearchLeadsFilters {
 }
 
 function buildRequestBody(filters: SearchLeadsFilters, page: number, size: number) {
+  // Only include filters that have actual values — never send empty arrays
   const filterObj: Record<string, unknown> = {};
 
-  if (filters.jobTitles?.length) {
+  if (filters.jobTitles && filters.jobTitles.length > 0) {
+    // Job titles: send as-is (mixed case is fine)
     filterObj["contact.experience.latest.title"] = filters.jobTitles;
   }
-  if (filters.industries?.length) {
-    // SearchLeads requires lowercase industry values
+  if (filters.industries && filters.industries.length > 0) {
+    // Industries: MUST be lowercase to match SearchLeads catalog
     filterObj["account.industry"] = filters.industries.map((i) => i.toLowerCase());
   }
-  if (filters.locations?.length) {
+  if (filters.locations && filters.locations.length > 0) {
+    // Locations: send as-is (proper casing like "United States")
     filterObj["contact.location"] = filters.locations;
   }
-  if (filters.seniority?.length) {
-    filterObj["contact.seniority"] = filters.seniority;
+  if (filters.seniority && filters.seniority.length > 0) {
+    // Seniority: must be lowercase enum values
+    filterObj["contact.seniority"] = filters.seniority.map((s) => s.toLowerCase());
   }
-  if (filters.technologies?.length) {
+  if (filters.technologies && filters.technologies.length > 0) {
     filterObj["account.technology"] = filters.technologies;
   }
-  if (filters.employeeSizeMin || filters.employeeSizeMax) {
-    filterObj["account.employeeSize"] = {
-      ...(filters.employeeSizeMin ? { min: filters.employeeSizeMin } : {}),
-      ...(filters.employeeSizeMax ? { max: filters.employeeSizeMax } : {}),
-    };
+  if (filters.employeeSizeMin != null || filters.employeeSizeMax != null) {
+    const sizeFilter: Record<string, number> = {};
+    if (filters.employeeSizeMin != null && filters.employeeSizeMin > 0) {
+      sizeFilter.min = Math.floor(filters.employeeSizeMin);
+    }
+    if (filters.employeeSizeMax != null && filters.employeeSizeMax > 0) {
+      sizeFilter.max = Math.floor(filters.employeeSizeMax);
+    }
+    if (Object.keys(sizeFilter).length > 0) {
+      filterObj["account.employeeSize"] = sizeFilter;
+    }
   }
 
   const body: Record<string, unknown> = { filters: filterObj, page, size };
 
-  if (filters.keyword) {
-    body.textFilters = { "contact.keyword": filters.keyword };
+  if (filters.keyword && filters.keyword.trim()) {
+    body.textFilters = { "contact.keyword": filters.keyword.trim() };
   }
 
   return body;
