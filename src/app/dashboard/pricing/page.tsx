@@ -233,22 +233,41 @@ export default function PricingPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-20 pb-20">
       {/* ── HEADER ── */}
-      <div className="text-center space-y-5 pt-4">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-          Simple pricing. Massive value.
+      <div
+        className="relative text-center space-y-5 pt-4"
+        style={{ background: "radial-gradient(circle at center, rgba(34,211,238,0.05) 0%, transparent 70%)" }}
+      >
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
+          <span className="text-white">Simple pricing. </span>
+          <span
+            className="bg-clip-text text-transparent"
+            style={{
+              backgroundImage: "linear-gradient(90deg, #22d3ee, #a855f7)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            Massive value.
+          </span>
         </h1>
-        <p className="text-sm text-gray-400">
-          New accounts start with 100 free credits — no credit card required.
+        <p className="text-lg text-gray-400">
+          New accounts start with{" "}
+          <span className="font-bold text-[#22d3ee]">100 free credits</span>
+          {" "}&mdash; no credit card required.
         </p>
         <p className="text-lg text-gray-400 text-center">
-          One credit = one lead from any platform. No subscriptions. No commitments.
+          One credit = <span className="text-white font-semibold">one lead from any platform</span>. No subscriptions. No commitments.
         </p>
         <p
-          className="text-2xl font-bold text-center bg-clip-text text-transparent"
+          className="text-3xl font-bold text-center mt-4"
           style={{
-            backgroundImage: "linear-gradient(90deg, #06B6D4, #A78BFA)",
+            backgroundSize: "200% 100%",
+            backgroundImage: "linear-gradient(90deg, #22d3ee, #ffffff, #22d3ee, #ffffff)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            animation: "badgeGradient 4s linear infinite",
+            textShadow: "0 0 20px rgba(34,211,238,0.3)",
           }}
         >
           Pay once, scrape forever.
