@@ -363,15 +363,15 @@ export default function PricingPage() {
                   Growtoro
                 </th>
                 <th className="text-center text-sm font-medium text-gray-500 py-3 px-4">Apollo</th>
-                <th className="text-center text-sm font-medium text-gray-500 py-3 px-4">Scravio</th>
+                <th className="text-center text-sm font-medium text-gray-500 py-3 px-4">Lusha</th>
                 <th className="text-center text-sm font-medium text-gray-500 py-3 px-4">PhantomBuster</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {[
                 { label: "Price", gt: "$29 one-time", ap: "$49/mo", sc: "$49/mo", pb: "$69/mo" },
-                { label: "Credits", gt: "3,000", ap: "900", sc: "5,000", pb: "Limited" },
-                { label: "Platforms", gt: "8", ap: "1 (B2B)", sc: "6 (Social)", pb: "3" },
+                { label: "Credits", gt: "3,000", ap: "900", sc: "480", pb: "Limited" },
+                { label: "Platforms", gt: "8", ap: "1 (B2B)", sc: "1 (B2B)", pb: "3" },
                 { label: "Subscription", gt: "check", ap: "x", sc: "x", pb: "x" },
               ].map((row) => (
                 <tr key={row.label} className="border-t border-card-border">
