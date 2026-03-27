@@ -91,7 +91,7 @@ const STATS = [
     value: "500M+",
     label: "contacts available",
     icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
       </svg>
     ),
@@ -100,7 +100,7 @@ const STATS = [
     value: "8",
     label: "platforms",
     icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
       </svg>
     ),
@@ -109,7 +109,7 @@ const STATS = [
     value: "No",
     label: "subscription required",
     icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
@@ -118,7 +118,7 @@ const STATS = [
     value: "CSV",
     label: "export included",
     icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
       </svg>
     ),
@@ -228,10 +228,10 @@ export default function PricingPage() {
         <p className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
           One credit = one lead from any platform. No subscriptions. No commitments. Pay once, scrape forever.
         </p>
-        <div className="flex flex-col items-center gap-3 pt-2">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col items-center gap-4 pt-2">
+          <div className="flex items-center gap-4">
             {PLATFORMS.map((p) => (
-              <p.Logo key={p.name} className="w-7 h-7 opacity-70" />
+              <p.Logo key={p.name} className="w-12 h-12 opacity-80 transition-transform duration-200 hover:scale-[1.15]" />
             ))}
           </div>
           <span className="text-sm text-gray-400">Works across all 8 platforms</span>
@@ -262,30 +262,40 @@ export default function PricingPage() {
 
             {/* Most Popular badge */}
             {pack.popular && (
-              <div className="absolute -top-px left-0 right-0 flex justify-center">
-                <span className="px-5 py-1.5 text-xs font-bold uppercase tracking-wider text-white rounded-b-lg bg-gradient-to-r from-purple-500 to-accent-cyan animate-[badgePulse_3s_ease-in-out_infinite]">
+              <div className="absolute -top-px left-0 right-0 flex justify-center z-30">
+                <span
+                  className="relative overflow-hidden px-6 py-2 text-sm font-extrabold uppercase tracking-widest text-white rounded-b-xl shadow-[0_0_20px_rgba(139,92,246,0.35)] animate-[badgeGlow_3s_ease-in-out_infinite]"
+                  style={{
+                    backgroundSize: "200% 100%",
+                    backgroundImage: "linear-gradient(90deg, #8B5CF6, #06B6D4, #8B5CF6, #06B6D4)",
+                    animation: "badgeGradient 3s linear infinite, badgeGlow 3s ease-in-out infinite",
+                    textShadow: "0 1px 8px rgba(139,92,246,0.5)",
+                  }}
+                >
                   Most Popular
+                  {/* Diagonal shine sweep */}
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-[badgeShineSweep_3s_ease-in-out_infinite]" />
                 </span>
               </div>
             )}
 
-            <div className="flex flex-col flex-1 p-8 pt-10">
+            <div className="flex flex-col flex-1 p-8 pt-12">
               {/* Tier name */}
-              <p className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+              <p className="text-lg font-bold uppercase tracking-[0.15em] text-gray-400">
                 {pack.name}
               </p>
 
               {/* Price */}
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-5xl font-extrabold text-white">${pack.price}</span>
-                <span className="text-base text-gray-500">/one-time</span>
+              <div className="mt-4 flex items-baseline gap-1.5">
+                <span className="text-6xl font-extrabold text-white">${pack.price}</span>
+                <span className="text-lg text-gray-500">/one-time</span>
               </div>
 
               {/* Credits */}
-              <p className="mt-3 text-xl font-bold text-accent-cyan">
+              <p className="mt-3 text-2xl font-bold text-accent-cyan">
                 {pack.credits.toLocaleString()} credits
               </p>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-base text-gray-400">
                 {pack.perCredit}/credit
               </p>
 
@@ -293,10 +303,10 @@ export default function PricingPage() {
               <div className="my-6 h-px bg-card-border" />
 
               {/* Features */}
-              <ul className="space-y-3 flex-1">
+              <ul className="space-y-4 flex-1">
                 {pack.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-300">
-                    <svg className="h-4 w-4 mt-0.5 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <li key={f} className="flex items-start gap-3 text-base text-gray-300 leading-snug">
+                    <svg className="h-5 w-5 mt-0.5 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                     </svg>
                     {f}
@@ -308,7 +318,7 @@ export default function PricingPage() {
               <button
                 onClick={() => handleBuy(pack.id)}
                 disabled={loading !== null}
-                className="relative mt-8 w-full py-3.5 text-base font-semibold text-white rounded-lg overflow-hidden bg-gradient-to-r from-accent-cyan to-accent transition-all disabled:opacity-50 hover:brightness-110"
+                className="relative mt-8 w-full py-4 text-lg font-bold text-white rounded-lg overflow-hidden bg-gradient-to-r from-accent-cyan to-accent transition-all disabled:opacity-50 hover:brightness-110"
               >
                 <span className="relative z-10">
                   {loading === pack.id ? "Processing..." : "Get Started"}
@@ -324,18 +334,19 @@ export default function PricingPage() {
       {/* ── TRUST / STATS ── */}
       <div
         ref={statsRef}
-        className={`grid grid-cols-2 lg:grid-cols-4 gap-4 transition-all duration-700 ${
-          statsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-        }`}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-6"
       >
-        {STATS.map((s) => (
+        {STATS.map((s, i) => (
           <div
             key={s.label}
-            className="flex flex-col items-center gap-2 p-6 rounded-xl bg-card border border-card-border text-center"
+            className={`flex flex-col items-center gap-3 py-8 px-6 rounded-2xl bg-card border border-card-border text-center shadow-[0_0_15px_rgba(6,182,212,0.04)] transition-all duration-700 ${
+              statsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
+            style={{ transitionDelay: statsVisible ? `${i * 200}ms` : "0ms" }}
           >
             <div className="text-accent-cyan">{s.icon}</div>
-            <p className="text-2xl font-bold text-accent-cyan">{s.value}</p>
-            <p className="text-sm text-gray-400">{s.label}</p>
+            <p className="text-4xl font-extrabold text-white">{s.value}</p>
+            <p className="text-lg text-gray-400">{s.label}</p>
           </div>
         ))}
       </div>
