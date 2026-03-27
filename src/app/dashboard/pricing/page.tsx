@@ -237,6 +237,9 @@ export default function PricingPage() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
           Simple pricing. Massive value.
         </h1>
+        <p className="text-sm text-gray-400">
+          New accounts start with 100 free credits — no credit card required.
+        </p>
         <p className="text-lg text-gray-400 text-center">
           One credit = one lead from any platform. No subscriptions. No commitments.
         </p>

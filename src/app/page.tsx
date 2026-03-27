@@ -63,7 +63,7 @@ export default function Home() {
               Sign up free
             </Link>
             <span className="text-base text-gray-400">
-              No credit card required. Only pay when you buy credits.
+              No credit card required. Get 100 free credits instantly.
             </span>
           </div>
 

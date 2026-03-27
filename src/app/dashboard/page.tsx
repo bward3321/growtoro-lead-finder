@@ -261,6 +261,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentBanner, setPaymentBanner] = useState<{ credits: number } | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // Simulated progress for PROCESSING SphereScout scrapes
   const [simProgress, setSimProgress] = useState<Record<string, number>>({});
@@ -342,6 +343,18 @@ export default function DashboardPage() {
     fetchData();
   }, [fetchData]);
 
+  // Show welcome banner for new users with exactly 100 credits and no scrapes
+  useEffect(() => {
+    if (
+      user &&
+      user.credits === 100 &&
+      scrapes.length === 0 &&
+      !localStorage.getItem("welcomeDismissed")
+    ) {
+      setShowWelcome(true);
+    }
+  }, [user, scrapes]);
+
   // Poll every 10 seconds if there are active scrapes
   useEffect(() => {
     const hasActive = scrapes.some((s) =>
@@ -371,6 +384,25 @@ export default function DashboardPage() {
           <button
             onClick={() => setPaymentBanner(null)}
             className="text-success/60 hover:text-success transition-colors"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {showWelcome && (
+        <div className="flex items-center justify-between p-4 bg-accent/10 border border-accent/20 rounded-xl">
+          <p className="text-accent-cyan font-medium">
+            Welcome! You have 100 free credits to get started.{" "}
+            <Link href="/dashboard/campaigns/new" className="underline hover:text-white transition-colors">
+              Try your first scrape now &rarr;
+            </Link>
+          </p>
+          <button
+            onClick={() => { setShowWelcome(false); localStorage.setItem("welcomeDismissed", "1"); }}
+            className="text-accent-cyan/60 hover:text-accent-cyan transition-colors"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
