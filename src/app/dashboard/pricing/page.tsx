@@ -225,7 +225,7 @@ export default function PricingPage() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
           Simple pricing. Massive value.
         </h1>
-        <p className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-base sm:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed sm:whitespace-nowrap">
           One credit = one lead from any platform. No subscriptions. No commitments. Pay once, scrape forever.
         </p>
         <div className="flex flex-col items-center gap-4 pt-2">
@@ -234,7 +234,18 @@ export default function PricingPage() {
               <p.Logo key={p.name} className="w-12 h-12 opacity-80 transition-transform duration-200 hover:scale-[1.15]" />
             ))}
           </div>
-          <span className="text-sm text-gray-400">Works across all 8 platforms</span>
+          <span
+            className="text-xl font-semibold bg-clip-text text-transparent"
+            style={{
+              backgroundSize: "200% 100%",
+              backgroundImage: "linear-gradient(90deg, #06B6D4, #8B5CF6, #06B6D4)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              animation: "badgeGradient 6s linear infinite",
+            }}
+          >
+            Works across all 8 platforms
+          </span>
         </div>
       </div>
 
@@ -264,17 +275,16 @@ export default function PricingPage() {
             {pack.popular && (
               <div className="absolute -top-px left-0 right-0 flex justify-center z-30">
                 <span
-                  className="relative overflow-hidden px-6 py-2 text-sm font-extrabold uppercase tracking-widest text-white rounded-b-xl shadow-[0_0_20px_rgba(139,92,246,0.35)] animate-[badgeGlow_3s_ease-in-out_infinite]"
+                  className="relative overflow-hidden px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white rounded-b-full"
                   style={{
                     backgroundSize: "200% 100%",
-                    backgroundImage: "linear-gradient(90deg, #8B5CF6, #06B6D4, #8B5CF6, #06B6D4)",
-                    animation: "badgeGradient 3s linear infinite, badgeGlow 3s ease-in-out infinite",
-                    textShadow: "0 1px 8px rgba(139,92,246,0.5)",
+                    backgroundImage: "linear-gradient(90deg, #8B5CF6 0%, #6D5FD4 25%, #06B6D4 50%, #6D5FD4 75%, #8B5CF6 100%)",
+                    animation: "badgeGradient 5s linear infinite, badgeGlow 5s ease-in-out infinite",
+                    textShadow: "0 1px 6px rgba(139,92,246,0.4)",
                   }}
                 >
                   Most Popular
-                  {/* Diagonal shine sweep */}
-                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-[badgeShineSweep_3s_ease-in-out_infinite]" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12 animate-[badgeShineSweep_4s_ease-in-out_infinite]" />
                 </span>
               </div>
             )}
@@ -286,9 +296,9 @@ export default function PricingPage() {
               </p>
 
               {/* Price */}
-              <div className="mt-4 flex items-baseline gap-1.5">
+              <div className="mt-4 flex items-baseline gap-1.5 flex-nowrap">
                 <span className="text-6xl font-extrabold text-white">${pack.price}</span>
-                <span className="text-lg text-gray-500">/one-time</span>
+                <span className="text-lg text-gray-500 whitespace-nowrap">/one-time</span>
               </div>
 
               {/* Credits */}
