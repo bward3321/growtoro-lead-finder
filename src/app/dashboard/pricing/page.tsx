@@ -1,46 +1,207 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import {
+  InstagramLogo,
+  TwitterLogo,
+  YouTubeLogo,
+  FacebookLogo,
+  LinkedInLogo,
+  TikTokLogo,
+  GoogleMapsLogo,
+  B2BContactsLogo,
+} from "@/components/PlatformLogos";
 
-const SOCIAL_PACKS = [
-  { id: "starter", name: "Starter", price: "$29", credits: "500", perLead: "$0.058", popular: false },
-  { id: "growth", name: "Growth", price: "$79", credits: "2,000", perLead: "$0.040", popular: true },
-  { id: "pro", name: "Pro", price: "$149", credits: "5,000", perLead: "$0.030", popular: false },
-  { id: "scale", name: "Scale", price: "$299", credits: "15,000", perLead: "$0.020", popular: false },
+const PACKS = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: 29,
+    credits: 3000,
+    perCredit: "$0.010",
+    popular: false,
+    features: [
+      "All 8 platforms included",
+      "Verified emails & phone numbers",
+      "CSV export",
+      "No expiration on credits",
+    ],
+  },
+  {
+    id: "growth",
+    name: "Growth",
+    price: 79,
+    credits: 10000,
+    perCredit: "$0.008",
+    popular: true,
+    features: [
+      "All 8 platforms included",
+      "Verified emails & phone numbers",
+      "CSV export",
+      "No expiration on credits",
+      "Best value per credit",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: 149,
+    credits: 20000,
+    perCredit: "$0.007",
+    popular: false,
+    features: [
+      "All 8 platforms included",
+      "Verified emails & phone numbers",
+      "CSV export",
+      "No expiration on credits",
+      "Priority support",
+    ],
+  },
+  {
+    id: "scale",
+    name: "Scale",
+    price: 299,
+    credits: 40000,
+    perCredit: "$0.007",
+    popular: false,
+    features: [
+      "All 8 platforms included",
+      "Verified emails & phone numbers",
+      "CSV export",
+      "No expiration on credits",
+      "Priority support",
+      "Bulk export up to 10K per scrape",
+    ],
+  },
 ];
 
-const GOOGLEMAPS_PACKS = [
-  { id: "gm-starter", name: "Starter", price: "$29", credits: "2,000", perLead: "$0.015", popular: false },
-  { id: "gm-growth", name: "Growth", price: "$59", credits: "5,000", perLead: "$0.012", popular: true },
-  { id: "gm-pro", name: "Pro", price: "$99", credits: "10,000", perLead: "$0.010", popular: false },
-  { id: "gm-scale", name: "Scale", price: "$199", credits: "25,000", perLead: "$0.008", popular: false },
+const PLATFORMS = [
+  { Logo: InstagramLogo, name: "Instagram" },
+  { Logo: TwitterLogo, name: "X" },
+  { Logo: YouTubeLogo, name: "YouTube" },
+  { Logo: FacebookLogo, name: "Facebook" },
+  { Logo: LinkedInLogo, name: "LinkedIn" },
+  { Logo: TikTokLogo, name: "TikTok" },
+  { Logo: GoogleMapsLogo, name: "Google Maps" },
+  { Logo: B2BContactsLogo, name: "B2B" },
 ];
 
-const B2B_PACKS = [
-  { id: "b2b-starter", name: "Starter", price: "$49", credits: "500", perLead: "$0.098", popular: false },
-  { id: "b2b-growth", name: "Growth", price: "$99", credits: "1,500", perLead: "$0.066", popular: true },
-  { id: "b2b-pro", name: "Pro", price: "$199", credits: "4,000", perLead: "$0.050", popular: false },
-  { id: "b2b-scale", name: "Scale", price: "$399", credits: "10,000", perLead: "$0.040", popular: false },
+const STATS = [
+  {
+    value: "500M+",
+    label: "contacts available",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+      </svg>
+    ),
+  },
+  {
+    value: "8",
+    label: "platforms",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+      </svg>
+    ),
+  },
+  {
+    value: "No",
+    label: "subscription required",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+  {
+    value: "CSV",
+    label: "export included",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      </svg>
+    ),
+  },
 ];
 
-type Mode = "social" | "googlemaps" | "b2bcontacts";
-
-const MODES: { id: Mode; label: string }[] = [
-  { id: "social", label: "Social Media" },
-  { id: "googlemaps", label: "Google Maps" },
-  { id: "b2bcontacts", label: "B2B Contacts" },
+const FAQS = [
+  {
+    q: "Do credits expire?",
+    a: "No. Your credits never expire. Use them whenever you need leads.",
+  },
+  {
+    q: "Can I use credits on any platform?",
+    a: "Yes. 1 credit = 1 lead from any of our 8 supported platforms — Instagram, X, YouTube, Facebook, LinkedIn, TikTok, Google Maps, and B2B Contacts.",
+  },
+  {
+    q: "Is there a subscription?",
+    a: "No. One-time purchase. Buy more credits whenever you need them.",
+  },
+  {
+    q: "What data do I get?",
+    a: "Verified email addresses, phone numbers, company info, LinkedIn profiles, and more — exported as a clean CSV.",
+  },
 ];
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    if (bodyRef.current) setHeight(bodyRef.current.scrollHeight);
+  }, [a]);
+
+  return (
+    <div className="border-b border-card-border">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between py-5 text-left"
+      >
+        <span className="text-base font-medium text-white">{q}</span>
+        <svg
+          className={`h-5 w-5 text-gray-400 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+      <div
+        className="overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ maxHeight: open ? height : 0 }}
+      >
+        <div ref={bodyRef} className="pb-5 text-sm text-gray-300 leading-relaxed">
+          {a}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>("social");
+  const [shineComplete, setShineComplete] = useState(false);
+  const [statsVisible, setStatsVisible] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
 
-  const packs = mode === "social" ? SOCIAL_PACKS : mode === "googlemaps" ? GOOGLEMAPS_PACKS : B2B_PACKS;
-  const isGM = mode === "googlemaps";
-  const isB2B = mode === "b2bcontacts";
-  const unitLabel = isB2B ? "contacts" : isGM ? "leads" : "verified emails";
-  const perUnit = isB2B ? "contact" : isGM ? "lead" : "email";
-  const accentColor = isB2B ? "#4F46E5" : isGM ? "#34A853" : "";
+  useEffect(() => {
+    const timer = setTimeout(() => setShineComplete(true), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!statsRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setStatsVisible(true); },
+      { threshold: 0.3 }
+    );
+    observer.observe(statsRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   async function handleBuy(packId: string) {
     setLoading(packId);
@@ -51,104 +212,198 @@ export default function PricingPage() {
         body: JSON.stringify({ packId }),
       });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
+      if (data.url) window.location.href = data.url;
     } finally {
       setLoading(null);
     }
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-white">Buy Credits</h1>
-        <p className="text-base text-gray-300 mt-2">
-          One-time credit packs. No subscriptions, pay as you go.
+    <div className="max-w-6xl mx-auto space-y-20 pb-20">
+      {/* ── HEADER ── */}
+      <div className="text-center space-y-5 pt-4">
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+          Simple pricing. Massive value.
+        </h1>
+        <p className="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          One credit = one lead from any platform. No subscriptions. No commitments. Pay once, scrape forever.
         </p>
-
-        {/* Three-way toggle */}
-        <div className="flex justify-center mt-6">
-          <div className="flex w-full max-w-md bg-card rounded-full p-1">
-            {MODES.map((m) => {
-              const isActive = mode === m.id;
-              const activeBg =
-                m.id === "googlemaps" ? "bg-[#34A853]"
-                : m.id === "b2bcontacts" ? "bg-[#4F46E5]"
-                : "bg-accent";
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => setMode(m.id)}
-                  className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-colors duration-200 outline-none border-none ${
-                    isActive ? `${activeBg} text-white` : "bg-transparent text-gray-400 hover:text-gray-200"
-                  }`}
-                >
-                  {m.label}
-                </button>
-              );
-            })}
+        <div className="flex flex-col items-center gap-3 pt-2">
+          <div className="flex items-center gap-3">
+            {PLATFORMS.map((p) => (
+              <p.Logo key={p.name} className="w-7 h-7 opacity-70" />
+            ))}
           </div>
+          <span className="text-sm text-gray-400">Works across all 8 platforms</span>
         </div>
       </div>
 
+      {/* ── PRICING CARDS ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {packs.map((pack) => {
-          const popularBg = isB2B ? "bg-[#4F46E5]" : isGM ? "bg-[#34A853]" : "badge-shine";
-          const popularBorder = isB2B
-            ? "border-[#4F46E5] bg-[#4F46E5]/5 ring-1 ring-[#4F46E5]/20"
-            : isGM
-              ? "border-[#34A853] bg-[#34A853]/5 ring-1 ring-[#34A853]/20"
-              : "border-accent bg-accent/5 ring-1 ring-accent/20";
-          const creditColor = isB2B ? "text-[#818CF8]" : isGM ? "text-[#34A853]" : "text-accent-cyan";
-          const btnPopular = isB2B
-            ? "bg-[#4F46E5] text-white hover:bg-[#4338CA]"
-            : isGM
-              ? "bg-[#34A853] text-white hover:bg-[#34A853]/90"
-              : "bg-accent text-white hover:bg-accent/90";
+        {PACKS.map((pack, i) => (
+          <div
+            key={pack.id}
+            className={`group relative flex flex-col rounded-2xl border transition-all duration-300 overflow-hidden ${
+              pack.popular
+                ? "border-accent/40 bg-gradient-to-b from-[#161d2e] to-[#111624] scale-[1.02] shadow-[0_0_30px_rgba(59,130,246,0.12)]"
+                : "border-card-border bg-gradient-to-b from-[#151a25] to-[#111624] hover:border-accent/30"
+            } hover:-translate-y-1 hover:shadow-[0_0_40px_rgba(6,182,212,0.10)]`}
+          >
+            {/* Shine sweep on load */}
+            {!shineComplete && (
+              <div
+                className="absolute inset-0 z-20 pointer-events-none"
+                style={{
+                  background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.03) 55%, transparent 60%)",
+                  animation: `cardSweep 0.6s ease-out ${0.2 + i * 0.2}s both`,
+                }}
+              />
+            )}
 
-          return (
-            <div
-              key={pack.id}
-              className={`relative p-8 rounded-xl border transition-all ${
-                pack.popular ? popularBorder : "border-card-border bg-card"
-              }`}
-            >
-              {pack.popular && (
-                <div
-                  className={`absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-1.5 text-sm font-semibold rounded-full text-white ${popularBg}`}
-                >
+            {/* Most Popular badge */}
+            {pack.popular && (
+              <div className="absolute -top-px left-0 right-0 flex justify-center">
+                <span className="px-5 py-1.5 text-xs font-bold uppercase tracking-wider text-white rounded-b-lg bg-gradient-to-r from-purple-500 to-accent-cyan animate-[badgePulse_3s_ease-in-out_infinite]">
                   Most Popular
-                </div>
-              )}
-              <div className="text-center space-y-6">
-                <h3 className="text-2xl font-bold text-white">{pack.name}</h3>
-                <div>
-                  <span className="text-5xl font-bold text-white">{pack.price}</span>
-                </div>
-                <div className="space-y-2">
-                  <p className={`text-xl font-semibold whitespace-nowrap ${creditColor}`}>
-                    {pack.credits} {unitLabel}
-                  </p>
-                  <p className="text-base text-gray-300">
-                    {pack.perLead} per {perUnit}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleBuy(pack.id)}
-                  disabled={loading !== null}
-                  className={`w-full py-4 text-lg font-semibold rounded-lg transition-colors disabled:opacity-50 ${
-                    pack.popular
-                      ? btnPopular
-                      : "bg-card border border-card-border text-white hover:bg-white/5"
-                  }`}
-                >
-                  {loading === pack.id ? "Processing..." : "Buy Now"}
-                </button>
+                </span>
               </div>
+            )}
+
+            <div className="flex flex-col flex-1 p-8 pt-10">
+              {/* Tier name */}
+              <p className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+                {pack.name}
+              </p>
+
+              {/* Price */}
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="text-5xl font-extrabold text-white">${pack.price}</span>
+                <span className="text-base text-gray-500">/one-time</span>
+              </div>
+
+              {/* Credits */}
+              <p className="mt-3 text-xl font-bold text-accent-cyan">
+                {pack.credits.toLocaleString()} credits
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                {pack.perCredit}/credit
+              </p>
+
+              {/* Divider */}
+              <div className="my-6 h-px bg-card-border" />
+
+              {/* Features */}
+              <ul className="space-y-3 flex-1">
+                {pack.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-gray-300">
+                    <svg className="h-4 w-4 mt-0.5 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA */}
+              <button
+                onClick={() => handleBuy(pack.id)}
+                disabled={loading !== null}
+                className="relative mt-8 w-full py-3.5 text-base font-semibold text-white rounded-lg overflow-hidden bg-gradient-to-r from-accent-cyan to-accent transition-all disabled:opacity-50 hover:brightness-110"
+              >
+                <span className="relative z-10">
+                  {loading === pack.id ? "Processing..." : "Get Started"}
+                </span>
+                {/* Btn shine sweep */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:animate-[btnSweep_0.6s_ease-out_forwards]" />
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
+      </div>
+
+      {/* ── TRUST / STATS ── */}
+      <div
+        ref={statsRef}
+        className={`grid grid-cols-2 lg:grid-cols-4 gap-4 transition-all duration-700 ${
+          statsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+        }`}
+      >
+        {STATS.map((s) => (
+          <div
+            key={s.label}
+            className="flex flex-col items-center gap-2 p-6 rounded-xl bg-card border border-card-border text-center"
+          >
+            <div className="text-accent-cyan">{s.icon}</div>
+            <p className="text-2xl font-bold text-accent-cyan">{s.value}</p>
+            <p className="text-sm text-gray-400">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── COMPARISON TABLE ── */}
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-white text-center">Why Growtoro?</h2>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <table className="w-full min-w-[600px] border-collapse">
+            <thead>
+              <tr>
+                <th className="text-left text-sm font-medium text-gray-400 py-3 px-4" />
+                <th className="text-center text-sm font-bold text-accent-cyan py-3 px-4 bg-accent/5 rounded-t-lg">
+                  Growtoro
+                </th>
+                <th className="text-center text-sm font-medium text-gray-500 py-3 px-4">Apollo</th>
+                <th className="text-center text-sm font-medium text-gray-500 py-3 px-4">Scravio</th>
+                <th className="text-center text-sm font-medium text-gray-500 py-3 px-4">PhantomBuster</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm">
+              {[
+                { label: "Price", gt: "$29 one-time", ap: "$49/mo", sc: "$49/mo", pb: "$69/mo" },
+                { label: "Credits", gt: "3,000", ap: "900", sc: "5,000", pb: "Limited" },
+                { label: "Platforms", gt: "8", ap: "1 (B2B)", sc: "6 (Social)", pb: "3" },
+                { label: "Subscription", gt: "check", ap: "x", sc: "x", pb: "x" },
+              ].map((row) => (
+                <tr key={row.label} className="border-t border-card-border">
+                  <td className="py-3.5 px-4 font-medium text-gray-300">{row.label}</td>
+                  <td className="py-3.5 px-4 text-center font-semibold text-white bg-accent/5">
+                    {row.gt === "check" ? (
+                      <span className="inline-flex items-center gap-1 text-success">
+                        No
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      </span>
+                    ) : (
+                      row.gt
+                    )}
+                  </td>
+                  {[row.ap, row.sc, row.pb].map((val, ci) => (
+                    <td key={ci} className="py-3.5 px-4 text-center text-gray-500">
+                      {val === "x" ? (
+                        <span className="inline-flex items-center gap-1 text-danger">
+                          Yes
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </span>
+                      ) : (
+                        val
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── FAQ ── */}
+      <div className="max-w-2xl mx-auto space-y-2">
+        <h2 className="text-2xl font-bold text-white text-center mb-8">Frequently Asked Questions</h2>
+        {FAQS.map((faq) => (
+          <FaqItem key={faq.q} q={faq.q} a={faq.a} />
+        ))}
       </div>
     </div>
   );

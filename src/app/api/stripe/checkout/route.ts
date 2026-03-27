@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { stripe, CREDIT_PACKS, GOOGLE_MAPS_PACKS, B2B_PACKS } from "@/lib/stripe";
+import { stripe, CREDIT_PACKS } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -11,22 +11,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { packId } = await request.json();
-    const pack = [...CREDIT_PACKS, ...GOOGLE_MAPS_PACKS, ...B2B_PACKS].find((p) => p.id === packId);
+    const pack = CREDIT_PACKS.find((p) => p.id === packId);
     if (!pack) {
       return Response.json({ error: "Invalid pack" }, { status: 400 });
     }
-    const isGoogleMaps = packId.startsWith("gm-");
-    const isB2B = packId.startsWith("b2b-");
 
     const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
-
-    console.log("Creating Stripe checkout session:", {
-      packId: pack.id,
-      price: pack.price,
-      credits: pack.credits,
-      userId: session.id,
-      baseUrl,
-    });
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -35,11 +25,7 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: isB2B
-                ? `${pack.name} - ${(pack.credits / 2).toLocaleString()} B2B Contacts`
-                : isGoogleMaps
-                  ? `${pack.name} - ${pack.credits.toLocaleString()} Google Maps Leads`
-                  : `${pack.name} - ${pack.credits.toLocaleString()} Verified Emails`,
+              name: `${pack.name} — ${pack.credits.toLocaleString()} Credits`,
             },
             unit_amount: pack.price,
           },
