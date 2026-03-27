@@ -287,8 +287,21 @@ export default function HistoryPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-300 text-lg">Loading...</div>
+      <div className="space-y-8">
+        <div className="h-8 w-48 bg-gray-700/50 rounded animate-pulse" />
+        <div className="bg-card border border-card-border rounded-xl overflow-hidden">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-card-border last:border-0 animate-pulse">
+              <div className="w-6 h-6 bg-gray-700/50 rounded" />
+              <div className="h-4 w-24 bg-gray-700/50 rounded" />
+              <div className="h-4 w-32 bg-gray-700/50 rounded" />
+              <div className="h-6 w-20 bg-gray-700/50 rounded-full" />
+              <div className="flex-1" />
+              <div className="h-4 w-16 bg-gray-700/50 rounded" />
+              <div className="h-4 w-20 bg-gray-700/50 rounded" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

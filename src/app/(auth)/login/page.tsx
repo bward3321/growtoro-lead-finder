@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -42,7 +43,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <Link href="/">
-            <img src="/logo.png" alt="Growtoro Lead Finder" style={{ height: 32, width: "auto" }} className="mx-auto" />
+            <Image src="/logo.png" alt="Growtoro Lead Finder" width={129} height={32} priority className="mx-auto" />
           </Link>
           <h2 className="mt-6 text-2xl font-bold text-white">Welcome back</h2>
           <p className="mt-1 text-base text-gray-300">Sign in to your account</p>

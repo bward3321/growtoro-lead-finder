@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -33,7 +34,7 @@ export default function DashboardNav() {
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
         <div className="flex items-center gap-8">
           <Link href="/dashboard">
-            <img src="/logo.png" alt="Growtoro" style={{ height: 28, width: "auto" }} />
+            <Image src="/logo.png" alt="Growtoro" width={113} height={28} priority />
           </Link>
           <div className="flex items-center gap-1">
             <Link

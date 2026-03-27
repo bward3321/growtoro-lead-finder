@@ -368,8 +368,29 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-300 text-lg">Loading...</div>
+      <div className="space-y-8">
+        {/* Skeleton stat cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-6 bg-card border border-card-border rounded-xl animate-pulse">
+              <div className="h-4 w-24 bg-gray-700/50 rounded mb-3" />
+              <div className="h-10 w-20 bg-gray-700/50 rounded" />
+            </div>
+          ))}
+        </div>
+        {/* Skeleton table rows */}
+        <div className="bg-card border border-card-border rounded-xl overflow-hidden">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-card-border last:border-0 animate-pulse">
+              <div className="w-6 h-6 bg-gray-700/50 rounded" />
+              <div className="h-4 w-24 bg-gray-700/50 rounded" />
+              <div className="h-4 w-32 bg-gray-700/50 rounded" />
+              <div className="h-6 w-20 bg-gray-700/50 rounded-full" />
+              <div className="flex-1" />
+              <div className="h-4 w-16 bg-gray-700/50 rounded" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -393,7 +414,7 @@ export default function DashboardPage() {
       )}
 
       {showWelcome && (
-        <div className="flex items-center justify-between p-4 bg-accent/10 border border-accent/20 rounded-xl">
+        <div className="flex items-center justify-between p-4 bg-card border border-card-border rounded-xl border-l-4 border-l-accent-cyan animate-[slideDown_0.4s_ease-out]">
           <p className="text-accent-cyan font-medium">
             Welcome! You have 100 free credits to get started.{" "}
             <Link href="/dashboard/campaigns/new" className="underline hover:text-white transition-colors">
@@ -402,7 +423,7 @@ export default function DashboardPage() {
           </p>
           <button
             onClick={() => { setShowWelcome(false); localStorage.setItem("welcomeDismissed", "1"); }}
-            className="text-accent-cyan/60 hover:text-accent-cyan transition-colors"
+            className="text-gray-500 hover:text-white transition-colors ml-4"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

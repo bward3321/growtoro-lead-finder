@@ -1,4 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
+
+export const revalidate = 3600;
 import {
   InstagramLogo,
   TwitterLogo,
@@ -26,7 +29,7 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       <nav className="flex items-center justify-between px-8 py-5 border-b border-card-border">
         <Link href="/">
-          <img src="/logo.png" alt="Growtoro Lead Finder" style={{ height: 32, width: "auto" }} />
+          <Image src="/logo.png" alt="Growtoro Lead Finder" width={129} height={32} priority />
         </Link>
         <div className="flex items-center gap-4">
           <Link

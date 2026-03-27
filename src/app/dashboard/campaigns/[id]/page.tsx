@@ -235,8 +235,21 @@ export default function ScrapeDetailPage({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-300 text-lg">Loading scrape...</div>
+      <div className="space-y-8 animate-pulse">
+        <div className="h-8 w-64 bg-gray-700/50 rounded" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-5 bg-card border border-card-border rounded-xl">
+              <div className="h-3 w-16 bg-gray-700/50 rounded mb-3" />
+              <div className="h-8 w-20 bg-gray-700/50 rounded" />
+            </div>
+          ))}
+        </div>
+        <div>
+          <div className="h-3 bg-card border border-card-border rounded-full overflow-hidden">
+            <div className="h-full w-1/3 bg-gray-700/50 rounded-full" />
+          </div>
+        </div>
       </div>
     );
   }
