@@ -333,9 +333,9 @@ export default function PricingPage() {
               </p>
 
               {/* Price */}
-              <div className="mt-4 flex items-baseline gap-1.5 flex-nowrap">
-                <span className="text-6xl font-extrabold text-white">${pack.price}</span>
-                <span className="text-lg text-gray-500 whitespace-nowrap">/one-time</span>
+              <div className="mt-4">
+                <span className="text-5xl font-extrabold text-white">${pack.price}</span>
+                <p className="text-base text-gray-500 mt-1">one-time payment</p>
               </div>
 
               {/* Credits */}
