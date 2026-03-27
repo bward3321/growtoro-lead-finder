@@ -237,8 +237,18 @@ export default function PricingPage() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
           Simple pricing. Massive value.
         </h1>
-        <p className="text-base sm:text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed text-center">
-          One credit = one lead from any platform. No subscriptions. No commitments. Pay once, scrape forever.
+        <p className="text-lg text-gray-400 text-center">
+          One credit = one lead from any platform. No subscriptions. No commitments.
+        </p>
+        <p
+          className="text-2xl font-bold text-center bg-clip-text text-transparent"
+          style={{
+            backgroundImage: "linear-gradient(90deg, #06B6D4, #A78BFA)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Pay once, scrape forever.
         </p>
         <div className="flex flex-col items-center gap-5 pt-4">
           <div className="flex items-start justify-center gap-7 flex-wrap">
