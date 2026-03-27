@@ -44,7 +44,8 @@ export default function ScrapeDetailPage({
   const [exporting, setExporting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [ssProgress, setSsProgress] = useState(0);
+  const [ssProgress, setSsProgress] = useState(15);
+  const ssTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollCountRef = useRef(0);
 
   const fetchScrape = useCallback(async (isPolling = false) => {
@@ -55,24 +56,15 @@ export default function ScrapeDetailPage({
       const campaign = data.campaign;
       setScrape(campaign);
 
-      // Update SphereScout progress based on actual status
+      // Update SphereScout progress on terminal states
       if (campaign?.source === "spherescout") {
-        const ssStatus = (data.spherescoutStatus || "").toUpperCase();
         if (campaign.status === "COMPLETED") {
+          // Stop simulation timer, animate to 100%
+          if (ssTimerRef.current) { clearInterval(ssTimerRef.current); ssTimerRef.current = null; }
           setSsProgress(100);
         } else if (campaign.status === "FAILED") {
+          if (ssTimerRef.current) { clearInterval(ssTimerRef.current); ssTimerRef.current = null; }
           setSsProgress(0);
-        } else if (ssStatus === "PENDING") {
-          setSsProgress(10);
-        } else if (ssStatus === "PROCESSING") {
-          // Increment between 30-70% to show movement
-          setSsProgress((prev) => {
-            if (prev >= 70) return 70;
-            if (prev < 30) return 30;
-            return Math.min(70, prev + 10);
-          });
-        } else {
-          setSsProgress((prev) => (prev < 10 ? 5 : prev));
         }
       }
 
@@ -108,6 +100,26 @@ export default function ScrapeDetailPage({
 
     return () => clearInterval(timer);
   }, [scrape?.status, scrape?.source, fetchScrape]);
+
+  // Simulate smooth progress for SphereScout PROCESSING: +5-8% every 3s, capped at 85%
+  useEffect(() => {
+    if (
+      scrape?.source === "spherescout" &&
+      !["COMPLETED", "FAILED", "STOPPED"].includes(scrape.status)
+    ) {
+      ssTimerRef.current = setInterval(() => {
+        setSsProgress((prev) => {
+          if (prev >= 85) return 85;
+          const increment = Math.floor(Math.random() * 4) + 5; // 5-8
+          return Math.min(85, prev + increment);
+        });
+      }, 3000);
+
+      return () => {
+        if (ssTimerRef.current) { clearInterval(ssTimerRef.current); ssTimerRef.current = null; }
+      };
+    }
+  }, [scrape?.source, scrape?.status]);
 
   async function handleStop() {
     setStopping(true);

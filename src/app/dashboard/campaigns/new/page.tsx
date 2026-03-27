@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect, useRef, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import {
   InstagramLogo,
@@ -180,6 +180,9 @@ export default function NewScrapePage() {
   const [b2bEmpMax, setB2bEmpMax] = useState("");
   const [b2bLeadCount, setB2bLeadCount] = useState<number | null>(null);
   const [b2bCountLoading, setB2bCountLoading] = useState(false);
+  const [b2bShowResults, setB2bShowResults] = useState(false);
+  const [b2bDisplayCount, setB2bDisplayCount] = useState(0);
+  const b2bCountUpRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch categories when Google Maps is selected
   useEffect(() => {
@@ -329,6 +332,9 @@ export default function NewScrapePage() {
   async function handleB2bCheckAvailability() {
     setB2bCountLoading(true);
     setB2bLeadCount(null);
+    setB2bShowResults(false);
+    setB2bDisplayCount(0);
+    if (b2bCountUpRef.current) { clearInterval(b2bCountUpRef.current); b2bCountUpRef.current = null; }
     setError("");
     try {
       const res = await fetch("/api/searchleads/count", {
@@ -341,7 +347,28 @@ export default function NewScrapePage() {
         setError(typeof data.error === "string" ? data.error : "Failed to check availability");
         return;
       }
-      setB2bLeadCount(data.totalElements ?? 0);
+      const count = data.totalElements ?? 0;
+      setB2bLeadCount(count);
+      // Trigger slide-in animation
+      requestAnimationFrame(() => setB2bShowResults(true));
+      // Count-up animation over 500ms
+      if (count > 0) {
+        const duration = 500;
+        const steps = 20;
+        const stepTime = duration / steps;
+        let step = 0;
+        b2bCountUpRef.current = setInterval(() => {
+          step++;
+          const progress = step / steps;
+          // Ease-out curve
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setB2bDisplayCount(Math.round(eased * count));
+          if (step >= steps) {
+            if (b2bCountUpRef.current) clearInterval(b2bCountUpRef.current);
+            setB2bDisplayCount(count);
+          }
+        }, stepTime);
+      }
     } catch {
       setError("Failed to check availability");
     } finally {
@@ -1028,19 +1055,47 @@ export default function NewScrapePage() {
             </div>
 
             {/* Check Availability */}
-            <button
-              onClick={handleB2bCheckAvailability}
-              disabled={!b2bHasFilters || b2bCountLoading}
-              className="w-full py-3.5 bg-card border border-indigo-500/30 text-indigo-400 text-base font-semibold rounded-lg hover:bg-indigo-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {b2bCountLoading ? "Checking..." : "Check Availability"}
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={handleB2bCheckAvailability}
+                disabled={!b2bHasFilters || b2bCountLoading}
+                className={`relative w-full py-3.5 border border-indigo-500/30 text-base font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden ${
+                  b2bCountLoading
+                    ? "bg-indigo-500/10 text-indigo-300"
+                    : "bg-card text-indigo-400 hover:bg-indigo-500/10"
+                }`}
+              >
+                {b2bCountLoading && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-500/10 to-transparent animate-[shimmer_1.5s_infinite]" />
+                )}
+                <span className="relative flex items-center justify-center gap-2">
+                  {b2bCountLoading && (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  )}
+                  {b2bCountLoading ? "Searching 500M+ contacts..." : "Check Availability"}
+                </span>
+              </button>
+
+              {/* Indeterminate progress bar while loading */}
+              {b2bCountLoading && (
+                <div className="h-1 w-full bg-indigo-500/10 rounded-full overflow-hidden">
+                  <div className="h-full w-1/3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full animate-[indeterminate_1.5s_ease-in-out_infinite]" />
+                </div>
+              )}
+            </div>
 
             {/* Lead Count Display */}
             {b2bLeadCount !== null && b2bLeadCount > 0 && (
-              <div className="p-5 bg-success/5 border border-success/20 rounded-lg">
+              <div
+                className={`p-5 bg-success/5 border border-success/20 rounded-lg transition-all duration-500 ${
+                  b2bShowResults ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                }`}
+              >
                 <p className="text-3xl font-bold text-white">
-                  {b2bLeadCount.toLocaleString()}{" "}
+                  {b2bDisplayCount.toLocaleString()}{" "}
                   <span className="text-lg font-medium text-success">contacts available</span>
                 </p>
                 <p className="text-sm text-gray-300 mt-2">
@@ -1050,7 +1105,11 @@ export default function NewScrapePage() {
             )}
 
             {b2bLeadCount !== null && b2bLeadCount === 0 && (
-              <div className="p-5 bg-danger/5 border border-danger/20 rounded-lg">
+              <div
+                className={`p-5 bg-danger/5 border border-danger/20 rounded-lg transition-all duration-500 ${
+                  b2bShowResults ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+                }`}
+              >
                 <p className="text-base text-danger font-medium">No contacts found for these filters.</p>
                 <p className="text-sm text-gray-400 mt-1">Try broadening your search criteria.</p>
               </div>
@@ -1065,8 +1124,12 @@ export default function NewScrapePage() {
             {/* Export Button */}
             <button
               onClick={handleB2bExport}
-              disabled={!b2bHasFilters || exportLoading || b2bLeadCount === null || b2bLeadCount === 0}
-              className="w-full py-4 bg-indigo-600 text-white text-lg font-semibold rounded-lg hover:bg-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!b2bHasFilters || exportLoading || b2bCountLoading || b2bLeadCount === null || b2bLeadCount === 0}
+              className={`w-full py-4 text-white text-lg font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                b2bLeadCount && b2bLeadCount > 0 && !b2bCountLoading
+                  ? "bg-indigo-600 hover:bg-indigo-500"
+                  : "bg-gray-600"
+              }`}
             >
               {exportLoading
                 ? "Exporting..."

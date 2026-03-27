@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -262,6 +262,48 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [paymentBanner, setPaymentBanner] = useState<{ credits: number } | null>(null);
 
+  // Simulated progress for PROCESSING SphereScout scrapes
+  const [simProgress, setSimProgress] = useState<Record<string, number>>({});
+  const simTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Start/stop simulation timer based on active PROCESSING SphereScout scrapes
+  useEffect(() => {
+    const processingIds = scrapes
+      .filter((s) => s.source === "spherescout" && s.status === "PROCESSING")
+      .map((s) => s.id);
+
+    if (processingIds.length === 0) {
+      if (simTimerRef.current) { clearInterval(simTimerRef.current); simTimerRef.current = null; }
+      return;
+    }
+
+    // Initialize progress for new PROCESSING scrapes
+    setSimProgress((prev) => {
+      const next = { ...prev };
+      for (const id of processingIds) {
+        if (!(id in next)) next[id] = 15;
+      }
+      return next;
+    });
+
+    simTimerRef.current = setInterval(() => {
+      setSimProgress((prev) => {
+        const next = { ...prev };
+        for (const id of processingIds) {
+          const cur = next[id] ?? 15;
+          if (cur < 85) {
+            next[id] = Math.min(85, cur + Math.floor(Math.random() * 4) + 5);
+          }
+        }
+        return next;
+      });
+    }, 3000);
+
+    return () => {
+      if (simTimerRef.current) { clearInterval(simTimerRef.current); simTimerRef.current = null; }
+    };
+  }, [scrapes]);
+
   const fetchData = useCallback(async () => {
     // Sync all active campaigns with Scravio and SphereScout before fetching
     await Promise.all([
@@ -461,7 +503,18 @@ export default function DashboardPage() {
                         {scrape.status === "QUEUED" ? (
                           <span className="text-sm text-orange-400/70">Queued — will begin shortly</span>
                         ) : scrape.status === "PROCESSING" ? (
-                          <span className="text-sm text-purple-400/70">Preparing export...</span>
+                          <div className="w-28">
+                            <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                              <span>Progress</span>
+                              <span>{simProgress[scrape.id] ?? 15}%</span>
+                            </div>
+                            <div className="h-2 bg-card border border-card-border rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
+                                style={{ width: `${simProgress[scrape.id] ?? 15}%`, transition: "width 0.5s ease" }}
+                              />
+                            </div>
+                          </div>
                         ) : scrape.status === "RUNNING" ? (
                           <div className="w-28">
                             <div className="flex items-center justify-between text-xs text-gray-400 mb-1">

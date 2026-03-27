@@ -116,3 +116,13 @@ input, select, textarea {
   background-size: 200% 100%;
   animation: badge-shine 3s linear infinite;
 }
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
