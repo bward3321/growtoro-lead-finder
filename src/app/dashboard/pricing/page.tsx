@@ -25,6 +25,7 @@ const PACKS = [
       "Verified emails & phone numbers",
       "CSV export",
       "No expiration on credits",
+      "Only charged for verified results",
     ],
   },
   {
@@ -39,6 +40,7 @@ const PACKS = [
       "Verified emails & phone numbers",
       "CSV export",
       "No expiration on credits",
+      "Only charged for verified results",
       "Best value per credit",
     ],
   },
@@ -54,6 +56,7 @@ const PACKS = [
       "Verified emails & phone numbers",
       "CSV export",
       "No expiration on credits",
+      "Only charged for verified results",
       "Priority support",
     ],
   },
@@ -69,6 +72,7 @@ const PACKS = [
       "Verified emails & phone numbers",
       "CSV export",
       "No expiration on credits",
+      "Only charged for verified results",
       "Priority support",
       "Bulk export up to 10K per scrape",
     ],
@@ -141,6 +145,14 @@ const FAQS = [
   {
     q: "What data do I get?",
     a: "Verified email addresses, phone numbers, company info, LinkedIn profiles, and more — exported as a clean CSV.",
+  },
+  {
+    q: "What platforms are supported?",
+    a: "Growtoro pulls leads from 8 platforms: Instagram, X/Twitter, YouTube, Facebook, LinkedIn, TikTok, Google Maps, and B2B Contacts (500M+ professional database). Use your credits on any combination of platforms — one credit works the same everywhere.",
+  },
+  {
+    q: "Am I charged for leads without emails?",
+    a: "No. You are only charged credits for contacts where we successfully find a verified email address. If no email is found, no credit is deducted. You only pay for results.",
   },
 ];
 
@@ -228,10 +240,18 @@ export default function PricingPage() {
         <p className="text-base sm:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed sm:whitespace-nowrap">
           One credit = one lead from any platform. No subscriptions. No commitments. Pay once, scrape forever.
         </p>
-        <div className="flex flex-col items-center gap-4 pt-2">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center gap-5 pt-4">
+          <div className="flex items-start justify-center gap-5 flex-wrap">
             {PLATFORMS.map((p) => (
-              <p.Logo key={p.name} className="w-12 h-12 opacity-80 transition-transform duration-200 hover:scale-[1.15]" />
+              <div key={p.name} className="flex flex-col items-center gap-1.5">
+                <div className="rounded-xl border border-card-border shadow-sm p-2 transition-transform duration-200 hover:scale-[1.15]">
+                  <p.Logo className="w-12 h-12" />
+                </div>
+                <span className="text-xs text-gray-500">{p.name}</span>
+                {p.name === "B2B" && (
+                  <span className="text-[10px] font-semibold bg-indigo-600 text-white rounded-full px-2 py-0.5 -mt-0.5">B2B</span>
+                )}
+              </div>
             ))}
           </div>
           <span
@@ -340,6 +360,11 @@ export default function PricingPage() {
           </div>
         ))}
       </div>
+
+      {/* ── TRUST LINE ── */}
+      <p className="text-center text-accent-cyan text-sm font-medium -mt-12">
+        You&apos;re only charged for verified emails found — never for empty results.
+      </p>
 
       {/* ── TRUST / STATS ── */}
       <div
