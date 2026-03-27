@@ -60,6 +60,21 @@ async function fetchPage(filters: Record<string, unknown>, keyword: string, page
   }
 
   const data = await res.json();
+
+  // Log full response envelope on first call to check for export-related metadata
+  if (page === 0) {
+    console.log("[SearchLeads Export] RAW RESPONSE TOP KEYS:", JSON.stringify(Object.keys(data)));
+    const inner = data?.results || data;
+    if (inner && typeof inner === "object") {
+      console.log("[SearchLeads Export] INNER RESPONSE KEYS:", JSON.stringify(Object.keys(inner)));
+    }
+    // Check if there are export-specific fields at the response level
+    console.log("[SearchLeads Export] data.export_url:", data?.export_url);
+    console.log("[SearchLeads Export] data.export_id:", data?.export_id);
+    console.log("[SearchLeads Export] data.credits_per_contact:", data?.credits_per_contact);
+    console.log("[SearchLeads Export] FULL RESPONSE (first 2000 chars):", JSON.stringify(data).substring(0, 2000));
+  }
+
   const inner = data?.results || data;
   return inner?.content || data?.content || [];
 }
@@ -198,13 +213,40 @@ export async function POST(request: NextRequest) {
 
       if (!Array.isArray(results) || results.length === 0) break;
 
-      // Log first contact's raw structure
-      if (page === 0) {
-        console.log("[SearchLeads Export] FIRST RAW CONTACT:", JSON.stringify(results[0]).slice(0, 3000));
-        console.log("[SearchLeads Export] TOP KEYS:", Object.keys(results[0]));
-        if (results[0]?.profile) console.log("[SearchLeads Export] PROFILE KEYS:", Object.keys(results[0].profile));
-        if (results[0]?.company) console.log("[SearchLeads Export] COMPANY KEYS:", Object.keys(results[0].company));
-        const parsed = extractContact(results[0]);
+      // Log first contact's COMPLETE raw structure for debugging email/phone paths
+      if (page === 0 && results.length > 0) {
+        const c0 = results[0];
+        console.log("[SearchLeads Export] FULL CONTACT OBJECT KEYS:", JSON.stringify(Object.keys(c0)));
+        console.log("[SearchLeads Export] FULL CONTACT:", JSON.stringify(c0).substring(0, 3000));
+
+        // Check every possible email path
+        console.log("[SearchLeads Export] profile.email:", c0?.profile?.email);
+        console.log("[SearchLeads Export] profile.work_email:", c0?.profile?.work_email);
+        console.log("[SearchLeads Export] profile.personal_emails:", c0?.profile?.personal_emails);
+        console.log("[SearchLeads Export] profile.emails:", c0?.profile?.emails);
+        console.log("[SearchLeads Export] email:", c0?.email);
+        console.log("[SearchLeads Export] emails:", c0?.emails);
+        console.log("[SearchLeads Export] contact_info:", c0?.contact_info);
+
+        // Check every possible phone path
+        console.log("[SearchLeads Export] phone_numbers:", c0?.phone_numbers);
+        console.log("[SearchLeads Export] profile.phone:", c0?.profile?.phone);
+        console.log("[SearchLeads Export] profile.phone_numbers:", c0?.profile?.phone_numbers);
+        console.log("[SearchLeads Export] phones:", c0?.phones);
+        console.log("[SearchLeads Export] mobile_phone:", c0?.mobile_phone);
+        console.log("[SearchLeads Export] direct_phone:", c0?.direct_phone);
+
+        // Check for export/credit-gating indicators
+        console.log("[SearchLeads Export] exportable:", c0?.exportable);
+        console.log("[SearchLeads Export] has_email:", c0?.has_email);
+        console.log("[SearchLeads Export] email_available:", c0?.email_available);
+        console.log("[SearchLeads Export] is_email_verified:", c0?.is_email_verified);
+        console.log("[SearchLeads Export] email_status:", c0?.email_status);
+
+        if (c0?.profile) console.log("[SearchLeads Export] PROFILE KEYS:", JSON.stringify(Object.keys(c0.profile)));
+        if (c0?.company) console.log("[SearchLeads Export] COMPANY KEYS:", JSON.stringify(Object.keys(c0.company)));
+
+        const parsed = extractContact(c0);
         console.log("[SearchLeads Export] FIRST PARSED:", JSON.stringify(parsed));
       }
 
