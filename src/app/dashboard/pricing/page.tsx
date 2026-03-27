@@ -80,14 +80,14 @@ const PACKS = [
 ];
 
 const PLATFORMS = [
-  { Logo: InstagramLogo, name: "Instagram" },
-  { Logo: TwitterLogo, name: "X" },
-  { Logo: YouTubeLogo, name: "YouTube" },
-  { Logo: FacebookLogo, name: "Facebook" },
-  { Logo: LinkedInLogo, name: "LinkedIn" },
-  { Logo: TikTokLogo, name: "TikTok" },
-  { Logo: GoogleMapsLogo, name: "Google Maps" },
-  { Logo: B2BContactsLogo, name: "B2B" },
+  { Logo: InstagramLogo, name: "Instagram", glow: "0 0 15px rgba(225,48,108,0.3)", glowHover: "0 0 20px rgba(225,48,108,0.5)" },
+  { Logo: TwitterLogo, name: "X", glow: "0 0 15px rgba(255,255,255,0.15)", glowHover: "0 0 20px rgba(255,255,255,0.3)" },
+  { Logo: YouTubeLogo, name: "YouTube", glow: "0 0 15px rgba(255,0,0,0.25)", glowHover: "0 0 20px rgba(255,0,0,0.5)" },
+  { Logo: FacebookLogo, name: "Facebook", glow: "0 0 15px rgba(24,119,242,0.3)", glowHover: "0 0 20px rgba(24,119,242,0.5)" },
+  { Logo: LinkedInLogo, name: "LinkedIn", glow: "0 0 15px rgba(0,119,181,0.3)", glowHover: "0 0 20px rgba(0,119,181,0.5)" },
+  { Logo: TikTokLogo, name: "TikTok", glow: "0 0 15px rgba(0,242,234,0.25)", glowHover: "0 0 20px rgba(0,242,234,0.5)" },
+  { Logo: GoogleMapsLogo, name: "Google Maps", glow: "0 0 15px rgba(52,168,83,0.3)", glowHover: "0 0 20px rgba(52,168,83,0.5)" },
+  { Logo: B2BContactsLogo, name: "B2B", glow: "0 0 15px rgba(99,102,241,0.3)", glowHover: "0 0 20px rgba(99,102,241,0.5)" },
 ];
 
 const STATS = [
@@ -237,19 +237,23 @@ export default function PricingPage() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
           Simple pricing. Massive value.
         </h1>
-        <p className="text-base sm:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed sm:whitespace-nowrap">
+        <p className="text-base sm:text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed text-center">
           One credit = one lead from any platform. No subscriptions. No commitments. Pay once, scrape forever.
         </p>
         <div className="flex flex-col items-center gap-5 pt-4">
-          <div className="flex items-start justify-center gap-5 flex-wrap">
+          <div className="flex items-start justify-center gap-7 flex-wrap">
             {PLATFORMS.map((p) => (
-              <div key={p.name} className="flex flex-col items-center gap-1.5">
-                <div className="rounded-xl border border-card-border shadow-sm p-2 transition-transform duration-200 hover:scale-[1.15]">
-                  <p.Logo className="w-12 h-12" />
+              <div key={p.name} className="group/icon flex flex-col items-center gap-1.5">
+                <div
+                  className="rounded-xl p-2.5 transition-all duration-300 hover:scale-[1.12]"
+                  style={{ boxShadow: p.glow }}
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = p.glowHover; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = p.glow; }}
+                >
+                  <p.Logo className="w-14 h-14" />
                 </div>
-                <span className="text-xs text-gray-500">{p.name}</span>
                 {p.name === "B2B" && (
-                  <span className="text-[10px] font-semibold bg-indigo-600 text-white rounded-full px-2 py-0.5 -mt-0.5">B2B</span>
+                  <span className="text-[10px] font-semibold bg-indigo-600 text-white rounded-full px-2 py-0.5">B2B</span>
                 )}
               </div>
             ))}
