@@ -41,7 +41,6 @@ export default function PricingPage() {
   const unitLabel = isB2B ? "contacts" : isGM ? "leads" : "verified emails";
   const perUnit = isB2B ? "contact" : isGM ? "lead" : "email";
   const accentColor = isB2B ? "#4F46E5" : isGM ? "#34A853" : "";
-  const modeIndex = MODES.findIndex((m) => m.id === mode);
 
   async function handleBuy(packId: string) {
     setLoading(packId);
@@ -69,30 +68,26 @@ export default function PricingPage() {
         </p>
 
         {/* Three-way toggle */}
-        <div className="flex items-center justify-center mt-6">
-          <div className="relative inline-flex items-center bg-card border border-card-border rounded-full p-1">
-            {MODES.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                className={`relative z-10 px-5 py-2.5 text-sm font-semibold rounded-full transition-colors duration-200 ${
-                  mode === m.id ? "text-white" : "text-gray-400 hover:text-gray-200"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-            {/* Sliding pill */}
-            <div
-              className={`absolute top-1 bottom-1 rounded-full transition-all duration-300 ease-in-out ${
-                !accentColor ? "bg-accent" : ""
-              }`}
-              style={{
-                width: `calc(${100 / 3}% - 4px)`,
-                transform: `translateX(calc(${modeIndex * 100}% + ${modeIndex * 8}px))`,
-                ...(accentColor ? { backgroundColor: accentColor } : {}),
-              }}
-            />
+        <div className="flex justify-center mt-6">
+          <div className="flex w-full max-w-md bg-card rounded-full p-1">
+            {MODES.map((m) => {
+              const isActive = mode === m.id;
+              const activeBg =
+                m.id === "googlemaps" ? "bg-[#34A853]"
+                : m.id === "b2bcontacts" ? "bg-[#4F46E5]"
+                : "bg-accent";
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => setMode(m.id)}
+                  className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-colors duration-200 outline-none border-none ${
+                    isActive ? `${activeBg} text-white` : "bg-transparent text-gray-400 hover:text-gray-200"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
