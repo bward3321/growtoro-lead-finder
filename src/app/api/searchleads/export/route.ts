@@ -36,13 +36,17 @@ function buildSearchLeadsFilters(src: any) {
   return filters;
 }
 
-async function fetchPage(filters: Record<string, unknown>, keyword: string, page: number, size: number) {
+/**
+ * Fetch a page of contacts using the EXPORT endpoint (includes emails & phones).
+ * Uses /people-search/export instead of /people-search.
+ */
+async function fetchExportPage(filters: Record<string, unknown>, keyword: string, page: number, size: number) {
   const requestBody: Record<string, unknown> = { filters, page, size };
   if (keyword && keyword.trim()) {
     requestBody.textFilters = { "contact.keyword": keyword.trim() };
   }
 
-  const res = await fetch(`${SEARCHLEADS_BASE_URL}/people-search`, {
+  const res = await fetch(`${SEARCHLEADS_BASE_URL}/people-search/export`, {
     method: "POST",
     cache: "no-store",
     headers: {
@@ -56,22 +60,22 @@ async function fetchPage(filters: Record<string, unknown>, keyword: string, page
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`SearchLeads API error ${res.status}: ${text.slice(0, 200)}`);
+
+    // Handle 402 — insufficient SearchLeads export credits
+    if (res.status === 402) {
+      const err = new Error("Export temporarily unavailable, please try again later");
+      (err as any).statusCode = 402;
+      throw err;
+    }
+
+    throw new Error(`SearchLeads export API error ${res.status}: ${text.slice(0, 200)}`);
   }
 
   const data = await res.json();
 
-  // Log full response envelope on first call to check for export-related metadata
+  // Log structure on first page for debugging
   if (page === 0) {
     console.log("[SearchLeads Export] RAW RESPONSE TOP KEYS:", JSON.stringify(Object.keys(data)));
-    const inner = data?.results || data;
-    if (inner && typeof inner === "object") {
-      console.log("[SearchLeads Export] INNER RESPONSE KEYS:", JSON.stringify(Object.keys(inner)));
-    }
-    // Check if there are export-specific fields at the response level
-    console.log("[SearchLeads Export] data.export_url:", data?.export_url);
-    console.log("[SearchLeads Export] data.export_id:", data?.export_id);
-    console.log("[SearchLeads Export] data.credits_per_contact:", data?.credits_per_contact);
     console.log("[SearchLeads Export] FULL RESPONSE (first 2000 chars):", JSON.stringify(data).substring(0, 2000));
   }
 
@@ -79,14 +83,26 @@ async function fetchPage(filters: Record<string, unknown>, keyword: string, page
   return inner?.content || data?.content || [];
 }
 
+/**
+ * Extract contact from the EXPORT endpoint response.
+ * Export fields: id, index, first_name, last_name, personal_email, email,
+ * email_status, valid_mobile_number, name, headline, title, linkedin_url,
+ * skills, department, sub_department.
+ * Also handles the nested profile/company structure from search endpoint as fallback.
+ */
 function extractContact(item: any): searchleads.SearchLeadsContact {
-  // Safely stringify — returns "" for null, undefined, or any object/array
   function str(val: unknown): string {
     if (val == null) return "";
     if (typeof val === "object") return "";
     return String(val);
   }
 
+  // Export endpoint flat fields
+  const firstName = str(item?.first_name);
+  const lastName = str(item?.last_name);
+  const exportName = str(item?.name);
+
+  // Nested profile/company (fallback from search endpoint structure)
   const profile = item?.profile || {};
   const company = item?.company || {};
   const link = item?.link || {};
@@ -97,23 +113,70 @@ function extractContact(item: any): searchleads.SearchLeadsContact {
   const currentPosition = positionGroups[0] || {};
   const currentCompanyFromPosition = currentPosition.company || {};
 
-  // location is a top-level object with a "default" field
+  // Name: prefer export flat fields, fall back to profile
+  const fullName =
+    exportName ||
+    [firstName, lastName].filter(Boolean).join(" ") ||
+    str(profile.full_name) ||
+    [str(profile.first_name), str(profile.last_name)].filter(Boolean).join(" ");
+
+  // Email: export endpoint provides personal_email and email
+  const email =
+    str(item?.email) ||
+    str(item?.personal_email) ||
+    str(profile.email) ||
+    str(profile.work_email);
+
+  // Phone: export endpoint provides valid_mobile_number
+  const phone =
+    str(item?.valid_mobile_number) ||
+    str(item?.phone) ||
+    str(item?.mobile_phone) ||
+    str(item?.direct_phone) ||
+    str(profile.phone);
+
+  // Job title
+  const jobTitle =
+    str(item?.title) ||
+    str(item?.headline) ||
+    str(profile.title) ||
+    str(profile.headline);
+
+  // Company name
+  const companyName =
+    str(item?.company_name) ||
+    str(currentCompanyFromPosition.name) ||
+    str(company.name) ||
+    str(company.summary);
+
+  // Industry
+  const industry =
+    str(item?.industry) ||
+    str(item?.department) ||
+    (Array.isArray(company.industries) ? str(company.industries[0]) : "");
+
+  // Location
   let location = "";
   if (typeof loc === "string") {
     location = loc;
-  } else {
+  } else if (typeof loc === "object" && loc !== null) {
     location = str(loc.default) || [str(loc.city), str(loc.state), str(loc.country)].filter(Boolean).join(", ");
   }
 
+  // LinkedIn URL
+  const linkedinUrl =
+    str(item?.linkedin_url) ||
+    str(link.linkedin);
+
   return {
-    fullName: str(profile.full_name) || [str(profile.first_name), str(profile.last_name)].filter(Boolean).join(" "),
-    email: str(profile.email) || str(item?.email),
-    phone: str(profile.phone) || str(item?.phone),
-    jobTitle: str(profile.title) || str(profile.headline),
-    company: str(currentCompanyFromPosition.name) || str(company.name) || str(company.summary),
-    industry: str(item?.industry) || (Array.isArray(company.industries) ? str(company.industries[0]) : ""),
+    fullName,
+    email,
+    phone,
+    jobTitle,
+    company: companyName,
+    industry,
     location,
-    linkedinUrl: str(link.linkedin),
+    linkedinUrl,
     companyWebsite: str(companyLink.website) || str(company.domain),
     companySize: str(companyStaff.total),
     seniority: str(item?.seniority),
@@ -156,7 +219,7 @@ export async function POST(request: NextRequest) {
 
   console.log("[SearchLeads Export] SearchLeads filters:", JSON.stringify(slFilters));
 
-  // B2B contacts cost 2 credits each
+  // B2B contacts cost 2 credits each (matches SearchLeads export credit cost)
   const creditsNeeded = desiredCount * 2;
 
   const user = await prisma.user.findUnique({ where: { id: session.id } });
@@ -196,11 +259,8 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // Return campaign immediately so frontend can redirect
-  // Then fetch contacts and update campaign
   const campaignId = campaign.id;
 
-  // Do the actual fetching (synchronous in this request — user already sees PROCESSING page)
   try {
     const contacts: searchleads.SearchLeadsContact[] = [];
     const pageSize = 100;
@@ -209,43 +269,16 @@ export async function POST(request: NextRequest) {
     while (contacts.length < desiredCount) {
       const remaining = desiredCount - contacts.length;
       const size = Math.min(pageSize, remaining);
-      const results = await fetchPage(slFilters, keyword, page, size);
+      const results = await fetchExportPage(slFilters, keyword, page, size);
 
       if (!Array.isArray(results) || results.length === 0) break;
 
-      // Log first contact's COMPLETE raw structure for debugging email/phone paths
+      // Log first contact from export endpoint
       if (page === 0 && results.length > 0) {
         const c0 = results[0];
-        console.log("[SearchLeads Export] FULL CONTACT OBJECT KEYS:", JSON.stringify(Object.keys(c0)));
-        console.log("[SearchLeads Export] FULL CONTACT:", JSON.stringify(c0).substring(0, 3000));
-
-        // Check every possible email path
-        console.log("[SearchLeads Export] profile.email:", c0?.profile?.email);
-        console.log("[SearchLeads Export] profile.work_email:", c0?.profile?.work_email);
-        console.log("[SearchLeads Export] profile.personal_emails:", c0?.profile?.personal_emails);
-        console.log("[SearchLeads Export] profile.emails:", c0?.profile?.emails);
-        console.log("[SearchLeads Export] email:", c0?.email);
-        console.log("[SearchLeads Export] emails:", c0?.emails);
-        console.log("[SearchLeads Export] contact_info:", c0?.contact_info);
-
-        // Check every possible phone path
-        console.log("[SearchLeads Export] phone_numbers:", c0?.phone_numbers);
-        console.log("[SearchLeads Export] profile.phone:", c0?.profile?.phone);
-        console.log("[SearchLeads Export] profile.phone_numbers:", c0?.profile?.phone_numbers);
-        console.log("[SearchLeads Export] phones:", c0?.phones);
-        console.log("[SearchLeads Export] mobile_phone:", c0?.mobile_phone);
-        console.log("[SearchLeads Export] direct_phone:", c0?.direct_phone);
-
-        // Check for export/credit-gating indicators
-        console.log("[SearchLeads Export] exportable:", c0?.exportable);
-        console.log("[SearchLeads Export] has_email:", c0?.has_email);
-        console.log("[SearchLeads Export] email_available:", c0?.email_available);
-        console.log("[SearchLeads Export] is_email_verified:", c0?.is_email_verified);
-        console.log("[SearchLeads Export] email_status:", c0?.email_status);
-
-        if (c0?.profile) console.log("[SearchLeads Export] PROFILE KEYS:", JSON.stringify(Object.keys(c0.profile)));
-        if (c0?.company) console.log("[SearchLeads Export] COMPANY KEYS:", JSON.stringify(Object.keys(c0.company)));
-
+        console.log("[SearchLeads Export] FIRST EXPORT CONTACT KEYS:", JSON.stringify(Object.keys(c0)));
+        console.log("[SearchLeads Export] FIRST EXPORT CONTACT:", JSON.stringify(c0).substring(0, 3000));
+        console.log("[SearchLeads Export] email:", c0?.email, "| personal_email:", c0?.personal_email, "| valid_mobile_number:", c0?.valid_mobile_number);
         const parsed = extractContact(c0);
         console.log("[SearchLeads Export] FIRST PARSED:", JSON.stringify(parsed));
       }
@@ -303,8 +336,13 @@ export async function POST(request: NextRequest) {
       data: { credits: { increment: creditsNeeded } },
     });
 
+    // User-friendly message for SearchLeads credit issues
+    const userMessage = error.statusCode === 402
+      ? "Export temporarily unavailable, please try again later"
+      : error.message || "Export failed";
+
     return Response.json(
-      { error: error.message || "Export failed", campaign },
+      { error: userMessage, campaign },
       { status: 502 }
     );
   }
