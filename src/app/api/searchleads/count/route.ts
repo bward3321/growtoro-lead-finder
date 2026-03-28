@@ -42,17 +42,43 @@ export async function POST(req: NextRequest) {
 
     console.log("SEARCHLEADS REQUEST BODY:", JSON.stringify(requestBody));
 
-    const response = await fetch("https://pro.searchleads.co/functions/v1/people-search", {
-      method: "POST",
-      cache: "no-store",
-      headers: {
-        "x-searchleads-api-key": process.env.SEARCHLEADS_API_KEY || "",
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "User-Agent": "GrowtorLeadFinder/1.0",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    let response: Response;
+    try {
+      response = await fetch("https://pro.searchleads.co/functions/v1/people-search", {
+        method: "POST",
+        cache: "no-store",
+        signal: controller.signal,
+        headers: {
+          "x-searchleads-api-key": process.env.SEARCHLEADS_API_KEY || "",
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": "GrowtorLeadFinder/1.0",
+        },
+        body: JSON.stringify(requestBody),
+      });
+    } catch (fetchErr: any) {
+      clearTimeout(timeout);
+      console.error("SearchLeads fetch error:", fetchErr.message);
+      const msg = fetchErr.name === "AbortError"
+        ? "B2B search service timed out. Please try again in a moment."
+        : "B2B search service temporarily unavailable. Please try again in a moment.";
+      return NextResponse.json({ error: msg, totalElements: 0 }, { status: 503 });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    // Guard against non-JSON responses (Cloudflare 502/503 HTML pages)
+    const slContentType = response.headers.get("content-type");
+    if (!slContentType || !slContentType.includes("application/json")) {
+      console.error("SearchLeads returned non-JSON response, status:", response.status);
+      return NextResponse.json(
+        { error: "B2B search service temporarily unavailable. Please try again in a moment.", totalElements: 0 },
+        { status: 503 }
+      );
+    }
 
     const responseText = await response.text();
     let result: any;
@@ -62,7 +88,7 @@ export async function POST(req: NextRequest) {
     console.log("SEARCHLEADS RESPONSE BODY:", String(responseText).slice(0, 2000));
 
     if (!response.ok) {
-      return NextResponse.json({ totalElements: 0, error: result });
+      return NextResponse.json({ totalElements: 0, error: "B2B search service temporarily unavailable. Please try again in a moment." });
     }
 
     // SearchLeads nests data under result.results

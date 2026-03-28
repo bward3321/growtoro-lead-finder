@@ -337,14 +337,33 @@ export default function NewScrapePage() {
     if (b2bCountUpRef.current) { clearInterval(b2bCountUpRef.current); b2bCountUpRef.current = null; }
     setError("");
     try {
-      const res = await fetch("/api/searchleads/count", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filters: getB2bFilters() }),
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      let res: Response;
+      try {
+        res = await fetch("/api/searchleads/count", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filters: getB2bFilters() }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr: any) {
+        clearTimeout(timeout);
+        throw new Error(
+          fetchErr.name === "AbortError"
+            ? "B2B search is temporarily unavailable. Please try again in a moment."
+            : "B2B search is temporarily unavailable. Please try again in a moment."
+        );
+      } finally {
+        clearTimeout(timeout);
+      }
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("B2B search is temporarily unavailable. Please try again in a moment.");
+      }
       const data = await res.json();
       if (data.error && !data.totalElements) {
-        setError(typeof data.error === "string" ? data.error : "Failed to check availability");
+        setError(typeof data.error === "string" ? data.error : "B2B search is temporarily unavailable. Please try again in a moment.");
         return;
       }
       const count = data.totalElements ?? 0;
@@ -369,8 +388,8 @@ export default function NewScrapePage() {
           }
         }, stepTime);
       }
-    } catch {
-      setError("Failed to check availability");
+    } catch (err: any) {
+      setError(err?.message || "B2B search is temporarily unavailable. Please try again in a moment.");
     } finally {
       setB2bCountLoading(false);
     }
@@ -381,17 +400,36 @@ export default function NewScrapePage() {
     setExportLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/searchleads/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filters: getB2bFilters(),
-          desiredCount: b2bLeadCount,
-        }),
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      let res: Response;
+      try {
+        res = await fetch("/api/searchleads/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filters: getB2bFilters(),
+            desiredCount: b2bLeadCount,
+          }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr: any) {
+        clearTimeout(timeout);
+        throw new Error(
+          fetchErr.name === "AbortError"
+            ? "B2B export timed out. Please try again in a moment."
+            : "B2B export is temporarily unavailable. Please try again in a moment."
+        );
+      } finally {
+        clearTimeout(timeout);
+      }
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("B2B export is temporarily unavailable. Please try again in a moment.");
+      }
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Export failed");
+        setError(data.error || "B2B export is temporarily unavailable. Please try again in a moment.");
         return;
       }
       const count = data.leadCount || 0;
@@ -830,8 +868,15 @@ export default function NewScrapePage() {
           </button>
 
           {error && (
-            <div className="p-4 text-base text-danger bg-danger/10 border border-danger/20 rounded-lg">
-              {error}
+            <div className="p-4 text-base text-danger bg-danger/10 border border-danger/20 rounded-lg flex items-center justify-between gap-3">
+              <span>{error}</span>
+              <button
+                type="button"
+                onClick={() => { setError(""); handleB2bCheckAvailability(); }}
+                className="shrink-0 px-3 py-1.5 text-sm font-medium bg-danger/20 hover:bg-danger/30 text-danger border border-danger/30 rounded-lg transition-colors"
+              >
+                Retry
+              </button>
             </div>
           )}
 

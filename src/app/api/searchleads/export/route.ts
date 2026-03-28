@@ -46,17 +46,43 @@ async function fetchExportPage(filters: Record<string, unknown>, keyword: string
     requestBody.textFilters = { "contact.keyword": keyword.trim() };
   }
 
-  const res = await fetch(`${SEARCHLEADS_BASE_URL}/people-search/export`, {
-    method: "POST",
-    cache: "no-store",
-    headers: {
-      "x-searchleads-api-key": API_KEY,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "GrowtorLeadFinder/1.0",
-    },
-    body: JSON.stringify(requestBody),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  let res: Response;
+  try {
+    res = await fetch(`${SEARCHLEADS_BASE_URL}/people-search/export`, {
+      method: "POST",
+      cache: "no-store",
+      signal: controller.signal,
+      headers: {
+        "x-searchleads-api-key": API_KEY,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "User-Agent": "GrowtorLeadFinder/1.0",
+      },
+      body: JSON.stringify(requestBody),
+    });
+  } catch (fetchErr: any) {
+    clearTimeout(timeout);
+    const msg = fetchErr.name === "AbortError"
+      ? "B2B export service timed out. Please try again in a moment."
+      : "B2B export service temporarily unavailable. Please try again in a moment.";
+    const err = new Error(msg);
+    (err as any).statusCode = 503;
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  // Guard against non-JSON responses (Cloudflare 502/503 HTML pages)
+  const slContentType = res.headers.get("content-type");
+  if (!slContentType || !slContentType.includes("application/json")) {
+    console.error("[SearchLeads Export] Non-JSON response, status:", res.status);
+    const err = new Error("B2B export service temporarily unavailable. Please try again in a moment.");
+    (err as any).statusCode = 503;
+    throw err;
+  }
 
   if (!res.ok) {
     const text = await res.text();
