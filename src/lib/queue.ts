@@ -3,34 +3,52 @@ import * as scravio from "@/lib/scravio";
 import * as spherescout from "@/lib/spherescout";
 import { sendScrapeCompletedEmail, sendScrapeFailedEmail } from "@/lib/email";
 
-const CONCURRENT_LIMIT = parseInt(process.env.SCRAVIO_CONCURRENT_LIMIT || "4", 10);
+const CONCURRENT_LIMIT = parseInt(process.env.SCRAVIO_CONCURRENT_LIMIT || "2", 10);
+const MAX_RETRIES = 3;
+const QUEUE_WARNING_MS = 30 * 60 * 1000; // 30 minutes
 
 export async function processQueue() {
-  // 1. Check how many campaigns are currently running on Scravio
-  let activeCount = 0;
-  try {
-    const active = await scravio.listActiveCampaigns();
-    const campaigns = active.campaigns || active.data || active;
-    activeCount = Array.isArray(campaigns) ? campaigns.length : 0;
-  } catch (error) {
-    console.error("Failed to check active campaigns:", error);
-    // Fall back to our DB count if Scravio API fails
-    activeCount = await prisma.campaign.count({
-      where: { status: "RUNNING" },
-    });
-  }
+  // 1. Count active Scravio campaigns from our DB
+  const activeCount = await prisma.campaign.count({
+    where: {
+      source: "scravio",
+      status: { in: ["RUNNING", "PENDING"] },
+    },
+  });
 
   const slotsAvailable = CONCURRENT_LIMIT - activeCount;
   if (slotsAvailable <= 0) {
     return { launched: 0, activeCount, slotsAvailable: 0 };
   }
 
-  // 2. Get oldest queued scrapes up to available slots
+  // 2. Get the single oldest queued scrape (only 1 per cycle to avoid overwhelming Scravio)
   const queued = await prisma.campaign.findMany({
-    where: { status: "QUEUED", scravioCampaignId: null },
-    orderBy: { createdAt: "asc" },
-    take: slotsAvailable,
+    where: {
+      status: "QUEUED",
+      scravioCampaignId: null,
+      source: "scravio",
+    },
+    orderBy: { queuedAt: "asc" },
+    take: 1,
   });
+
+  // 3. Warn about scrapes queued for >30 minutes
+  const allQueued = await prisma.campaign.findMany({
+    where: {
+      status: "QUEUED",
+      scravioCampaignId: null,
+      source: "scravio",
+    },
+    select: { id: true, queuedAt: true, createdAt: true },
+  });
+
+  const now = Date.now();
+  for (const q of allQueued) {
+    const queueTime = q.queuedAt ? q.queuedAt.getTime() : q.createdAt.getTime();
+    if (now - queueTime > QUEUE_WARNING_MS) {
+      console.warn(`[Queue] WARNING: Campaign ${q.id} has been QUEUED for over 30 minutes (since ${new Date(queueTime).toISOString()})`);
+    }
+  }
 
   let launched = 0;
 
@@ -64,41 +82,53 @@ export async function processQueue() {
       await prisma.campaign.update({
         where: { id: campaign.id },
         data: {
-          status: "RUNNING",
+          status: "PENDING",
           scravioCampaignId,
+          retryCount: 0,
         },
       });
 
       launched++;
     } catch (error) {
-      console.error(`Failed to launch queued campaign ${campaign.id}:`, error);
+      console.error(`Failed to launch queued campaign ${campaign.id} (retry ${campaign.retryCount}/${MAX_RETRIES}):`, error);
 
-      // Mark as failed and refund all credits
-      await prisma.$transaction([
-        prisma.campaign.update({
-          where: { id: campaign.id },
-          data: { status: "FAILED", creditsUsed: 0, creditsRefunded: campaign.creditsUsed },
-        }),
-        prisma.user.update({
+      const newRetryCount = campaign.retryCount + 1;
+
+      if (newRetryCount >= MAX_RETRIES) {
+        // Max retries reached — fail and refund
+        await prisma.$transaction([
+          prisma.campaign.update({
+            where: { id: campaign.id },
+            data: { status: "FAILED", creditsUsed: 0, creditsRefunded: campaign.creditsUsed, retryCount: newRetryCount },
+          }),
+          prisma.user.update({
+            where: { id: campaign.userId },
+            data: { credits: { increment: campaign.creditsUsed } },
+          }),
+        ]);
+
+        console.log(`Refunded ${campaign.creditsUsed} credits to user ${campaign.userId} for failed campaign ${campaign.id} after ${MAX_RETRIES} retries`);
+
+        const user = await prisma.user.findUnique({
           where: { id: campaign.userId },
-          data: { credits: { increment: campaign.creditsUsed } },
-        }),
-      ]);
-
-      console.log(`Refunded ${campaign.creditsUsed} credits to user ${campaign.userId} for failed campaign ${campaign.id}`);
-
-      const user = await prisma.user.findUnique({
-        where: { id: campaign.userId },
-      });
-      if (user?.email) {
-        await sendScrapeFailedEmail(user.email, {
-          campaignId: campaign.id,
-          name: campaign.name,
-          platform: campaign.platform,
-          extractionType: campaign.extractionType,
-          config: campaign.config,
-          leadsFound: 0,
         });
+        if (user?.email) {
+          await sendScrapeFailedEmail(user.email, {
+            campaignId: campaign.id,
+            name: campaign.name,
+            platform: campaign.platform,
+            extractionType: campaign.extractionType,
+            config: campaign.config,
+            leadsFound: 0,
+          });
+        }
+      } else {
+        // Increment retry count, keep as QUEUED for next cycle
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { retryCount: newRetryCount },
+        });
+        console.log(`[Queue] Campaign ${campaign.id} will retry on next cycle (attempt ${newRetryCount}/${MAX_RETRIES})`);
       }
     }
   }
@@ -331,12 +361,45 @@ export async function getQueuePosition(campaignId: string): Promise<number> {
 
   if (!campaign || campaign.status !== "QUEUED") return 0;
 
+  const queueTime = campaign.queuedAt || campaign.createdAt;
+
   const ahead = await prisma.campaign.count({
     where: {
       status: "QUEUED",
-      createdAt: { lt: campaign.createdAt },
+      source: "scravio",
+      OR: [
+        { queuedAt: { lt: queueTime } },
+        { queuedAt: null, createdAt: { lt: queueTime } },
+      ],
     },
   });
 
   return ahead + 1;
+}
+
+export async function cancelQueuedCampaign(campaignId: string, userId: string) {
+  const campaign = await prisma.campaign.findFirst({
+    where: { id: campaignId, userId, status: "QUEUED" },
+  });
+
+  if (!campaign) return null;
+
+  const [updated] = await prisma.$transaction([
+    prisma.campaign.update({
+      where: { id: campaignId },
+      data: {
+        status: "FAILED",
+        creditsUsed: 0,
+        creditsRefunded: campaign.creditsUsed,
+      },
+    }),
+    prisma.user.update({
+      where: { id: userId },
+      data: { credits: { increment: campaign.creditsUsed } },
+    }),
+  ]);
+
+  console.log(`[Queue] Cancelled queued campaign ${campaignId}, refunded ${campaign.creditsUsed} credits to user ${userId}`);
+
+  return updated;
 }

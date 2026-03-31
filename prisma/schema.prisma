@@ -20,24 +20,26 @@ model User {
 }
 
 model Campaign {
-  id                   String   @id @default(cuid())
+  id                   String    @id @default(cuid())
   userId               String
-  user                 User     @relation(fields: [userId], references: [id])
+  user                 User      @relation(fields: [userId], references: [id])
   scravioCampaignId    String?
   spherescoutSearchId  String?
   searchleadsData      String?
-  source               String   @default("scravio")
+  source               String    @default("scravio")
   name                 String
   platform             String
   extractionType       String
-  status               String   @default("PENDING")
+  status               String    @default("PENDING")
   targetCount          Int
-  creditsUsed          Int      @default(0)
-  creditsRefunded      Int      @default(0)
+  creditsUsed          Int       @default(0)
+  creditsRefunded      Int       @default(0)
   config               String
-  leadsFound           Int      @default(0)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  leadsFound           Int       @default(0)
+  queuedAt             DateTime?
+  retryCount           Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model Payment {

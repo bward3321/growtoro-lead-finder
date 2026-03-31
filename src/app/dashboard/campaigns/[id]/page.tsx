@@ -44,6 +44,8 @@ export default function ScrapeDetailPage({
   const [exporting, setExporting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [queuePosition, setQueuePosition] = useState(0);
   const [ssProgress, setSsProgress] = useState(15);
   const ssTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollCountRef = useRef(0);
@@ -55,6 +57,7 @@ export default function ScrapeDetailPage({
       const data = await res.json();
       const campaign = data.campaign;
       setScrape(campaign);
+      if (data.queuePosition) setQueuePosition(data.queuePosition);
 
       // Update SphereScout progress on terminal states
       if (campaign?.source === "spherescout") {
@@ -203,6 +206,19 @@ export default function ScrapeDetailPage({
     }
   }
 
+  async function handleCancel() {
+    if (!confirm("Cancel this queued scrape? Your credits will be refunded.")) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/scravio/campaigns/${id}/cancel`, { method: "POST" });
+      if (res.ok) {
+        fetchScrape();
+      }
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   function downloadCSV() {
     if (leads.length === 0) return;
     const headers = ["username", "name", "email", "follower_count", "bio"];
@@ -292,6 +308,15 @@ export default function ScrapeDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {scrape.status === "QUEUED" && (
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="px-6 py-3 text-base border border-orange-400/30 text-orange-400 rounded-lg hover:bg-orange-400/10 transition-colors disabled:opacity-50"
+            >
+              {cancelling ? "Cancelling..." : "Cancel & Refund"}
+            </button>
+          )}
           {scrape.status === "RUNNING" && (
             <button
               onClick={handleStop}
@@ -389,8 +414,10 @@ export default function ScrapeDetailPage({
       {/* Queued message */}
       {scrape.status === "QUEUED" && (
         <div className="px-5 py-3 bg-orange-400/10 border border-orange-400/30 rounded-lg">
-          <p className="text-orange-400 text-base">
-            Your scrape is queued and will begin processing shortly.
+          <p className="text-orange-400 text-base animate-pulse">
+            {queuePosition > 0
+              ? `Your scrape is #${queuePosition} in the queue and will start automatically.`
+              : "Your scrape is queued and will start automatically when a slot opens."}
           </p>
         </div>
       )}

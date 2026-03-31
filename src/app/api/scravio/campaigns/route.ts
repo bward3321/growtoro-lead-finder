@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         creditsUsed: targetCount,
         config: JSON.stringify(config),
         status: "QUEUED",
+        queuedAt: new Date(),
       },
     });
 

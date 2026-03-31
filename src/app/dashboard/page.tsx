@@ -179,6 +179,36 @@ function DeleteButton({ scrapeId, onDelete }: { scrapeId: string; onDelete: () =
   );
 }
 
+function CancelButton({ scrapeId, onCancel }: { scrapeId: string; onCancel: () => void }) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleCancel(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Cancel this queued scrape? Your credits will be refunded.")) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/scravio/campaigns/${scrapeId}/cancel`, { method: "POST" });
+      if (res.ok) onCancel();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleCancel}
+      disabled={loading}
+      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-orange-400 border border-orange-400/20 rounded-lg hover:bg-orange-400/10 transition-colors disabled:opacity-50"
+    >
+      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      {loading ? "..." : "Cancel"}
+    </button>
+  );
+}
+
 function StatusBadge({ status, queuePosition }: { status: string; queuePosition?: number }) {
   if (status === "QUEUED") {
     return (
@@ -554,7 +584,10 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-5 py-4">
                         {scrape.status === "QUEUED" ? (
-                          <span className="text-sm text-orange-400/70">Queued — will begin shortly</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-orange-400/70 animate-pulse">Waiting for slot...</span>
+                            <CancelButton scrapeId={scrape.id} onCancel={fetchData} />
+                          </div>
                         ) : scrape.status === "PROCESSING" ? (
                           <div className="w-28">
                             <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
