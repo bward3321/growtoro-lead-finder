@@ -74,8 +74,17 @@ export default function Home() {
             {platforms.map((p) => (
               <div
                 key={p.name}
-                className={`platform-card flex flex-col items-center justify-center gap-5 px-10 py-8 min-w-[160px] rounded-2xl border border-card-border bg-card transition-all duration-300 ${p.hoverBorder} ${p.hoverGlow}`}
+                className={`platform-card relative flex flex-col items-center justify-center gap-5 px-10 py-8 min-w-[160px] rounded-2xl border border-card-border bg-card transition-all duration-300 ${
+                  p.name === "B2B Contacts"
+                    ? "pointer-events-none opacity-60"
+                    : `${p.hoverBorder} ${p.hoverGlow}`
+                }`}
               >
+                {p.name === "B2B Contacts" && (
+                  <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold uppercase px-2 py-0.5 rounded-full animate-pulse">
+                    Coming Soon
+                  </span>
+                )}
                 <p.Logo className="w-20 h-20" />
                 <span className="text-lg font-semibold text-white/80">{p.name}</span>
               </div>

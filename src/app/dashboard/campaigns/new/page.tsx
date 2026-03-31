@@ -217,6 +217,7 @@ export default function NewScrapePage() {
     : [];
 
   function selectPlatform(id: string) {
+    if (id === "b2bcontacts") return;
     setPlatform(id);
     setMethod(null);
     setSelectedCategory(null);
@@ -526,13 +527,23 @@ export default function NewScrapePage() {
           {PLATFORMS.map((p) => (
             <button
               key={p.id}
-              onClick={() => selectPlatform(p.id)}
-              className={`flex flex-col items-center gap-4 px-10 py-8 min-w-[160px] rounded-2xl border text-center transition-all hover:border-accent/50 hover:bg-accent/5 ${
-                platform === p.id
-                  ? "border-accent bg-accent/10"
-                  : "border-card-border bg-card"
+              onClick={() => p.id !== "b2bcontacts" && selectPlatform(p.id)}
+              disabled={p.id === "b2bcontacts"}
+              className={`relative flex flex-col items-center gap-4 px-10 py-8 min-w-[160px] rounded-2xl border text-center transition-all ${
+                p.id === "b2bcontacts"
+                  ? "opacity-60 cursor-not-allowed border-card-border bg-card"
+                  : `hover:border-accent/50 hover:bg-accent/5 ${
+                      platform === p.id
+                        ? "border-accent bg-accent/10"
+                        : "border-card-border bg-card"
+                    }`
               }`}
             >
+              {p.id === "b2bcontacts" && (
+                <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold uppercase px-2 py-0.5 rounded-full animate-pulse">
+                  Coming Soon
+                </span>
+              )}
               <p.Logo className="w-16 h-16" />
               <span className="text-lg font-semibold text-white">{p.name}</span>
             </button>

@@ -136,7 +136,7 @@ const FAQS = [
   },
   {
     q: "Can I use credits on any platform?",
-    a: "Yes. 1 credit = 1 lead from any of our 8 supported platforms — Instagram, X, YouTube, Facebook, LinkedIn, TikTok, Google Maps, and B2B Contacts.",
+    a: "Yes. 1 credit = 1 lead from any of our 8 supported platforms — Instagram, X, YouTube, Facebook, LinkedIn, TikTok, Google Maps, and B2B Contacts (coming soon).",
   },
   {
     q: "Is there a subscription?",
@@ -148,7 +148,7 @@ const FAQS = [
   },
   {
     q: "What platforms are supported?",
-    a: "Growtoro pulls leads from 8 platforms: Instagram, X/Twitter, YouTube, Facebook, LinkedIn, TikTok, Google Maps, and B2B Contacts (500M+ professional database). Use your credits on any combination of platforms — one credit works the same everywhere.",
+    a: "Growtoro pulls leads from 8 platforms: Instagram, X/Twitter, YouTube, Facebook, LinkedIn, TikTok, Google Maps, and B2B Contacts (coming soon — 500M+ professional database). Use your credits on any combination of platforms — one credit works the same everywhere.",
   },
   {
     q: "Am I charged for leads without emails?",
